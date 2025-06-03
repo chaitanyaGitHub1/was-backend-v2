@@ -1,0 +1,9 @@
+type AuthPayload {
+  token: String!
+  userId: ID!
+}
+
+type Mutation {
+  requestOtp(phone: String!): Boolean!
+  verifyOtp(phone: String!, otp: String!): AuthPayload!
+}

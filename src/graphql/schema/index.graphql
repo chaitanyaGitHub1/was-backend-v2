@@ -1,0 +1,26 @@
+schema {
+  query: Query
+  mutation: Mutation
+}
+
+# You must have a Query type, even if empty
+type Query {
+  _empty: String
+  getUserProfile: UserProfile! 
+}
+
+type Mutation {
+  requestOtp(phone: String!): Boolean!
+  verifyOtp(phone: String!, otp: String!): AuthPayload!
+}
+
+type AuthPayload {
+  token: String!
+  userId: ID!
+}
+
+type UserProfile {
+  name: String!
+  phone: String!
+  role: String!
+}
