@@ -54,7 +54,7 @@ async function startServer() {
 
   // Start server
   const PORT = process.env.PORT || 4000;
-  httpServer.listen(PORT, () => {
+  httpServer.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running at http://localhost:${PORT}${apolloServer.graphqlPath}`);
     console.log(`Subscriptions available at ws://localhost:${PORT}${apolloServer.graphqlPath}`);
   });

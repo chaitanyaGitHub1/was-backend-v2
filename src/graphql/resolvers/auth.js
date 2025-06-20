@@ -11,6 +11,7 @@ module.exports = {
   let user = await User.findOne({ 'auth.phone': phone });
   if (!user) {
     // Create a new user with just the phone number and a temporary name
+    console.log(otpCode, expiresAt);
     user = await User.create({
       auth: { 
         phone, 
@@ -30,6 +31,7 @@ module.exports = {
     });
   } else {
     user.auth.otp = { code: otpCode, expiresAt, attempts: 0 };
+    console.log(otpCode, expiresAt);
     await user.save();
   }
   

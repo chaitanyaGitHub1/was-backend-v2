@@ -1,0 +1,7 @@
+type Mutation {
+  getPresignedS3Url(fileName: String!, fileType: String!): PresignedUrlResponse!
+}
+
+type PresignedUrlResponse {
+  url: String!
+}
