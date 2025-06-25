@@ -1,9 +1,11 @@
-const { gql } = require('apollo-server-express');
-const fs = require('fs');
 const path = require('path');
+const { loadFilesSync } = require('@graphql-tools/load-files');
+const { mergeTypeDefs } = require('@graphql-tools/merge');
 
-const typeDefs = gql(
-  fs.readFileSync(path.join(__dirname, 'index.graphql'), 'utf8')
-);
+// Load all .graphql files from the schema directory
+const typesArray = loadFilesSync(path.join(__dirname, './**/*.graphql'));
+
+// Merge all type definitions into a single schema
+const typeDefs = mergeTypeDefs(typesArray);
 
 module.exports = typeDefs;

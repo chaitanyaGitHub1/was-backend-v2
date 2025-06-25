@@ -3,7 +3,6 @@ schema {
   mutation: Mutation
 }
 
-# You must have a Query type, even if empty
 type Query {
   _empty: String
   getUserProfile: UserProfile!
@@ -20,75 +19,4 @@ type Mutation {
   updateVerificationStatus(id: ID!, status: String!, rejectionReason: String): DocumentVerification!
   getPresignedS3Url(fileName: String!, fileType: String!): PresignedUrlResponse!
   getPresignedS3GetUrl(fileName: String!): PresignedUrlResponse!
-}
-
-type AuthPayload {
-  token: String!
-  userId: ID!
-}
-
-type UserProfile {
-  name: String!
-  phone: String!
-  role: String!
-}
-
-# Document Verification Types
-type DocumentVerification {
-  id: ID!
-  userId: ID!
-  fullName: String!
-  dateOfBirth: String!
-  address: String!
-  gender: String!
-  documents: Documents!
-  verificationStatus: String!
-  rejectionReason: String
-  submittedAt: String!
-  verifiedAt: String
-  updatedAt: String!
-}
-
-type Documents {
-  aadharCard: AadharCard!
-  panCard: PanCard!
-  selfie: Selfie!
-}
-
-type AadharCard {
-  frontImage: String!
-  backImage: String!
-  verified: Boolean!
-}
-
-type PanCard {
-  image: String!
-  verified: Boolean!
-}
-
-type Selfie {
-  image: String!
-  verificationCode: String!
-  verified: Boolean!
-}
-
-input DocumentVerificationInput {
-  fullName: String!
-  dateOfBirth: String!
-  address: String!
-  gender: String!
-  aadharFrontImage: String!
-  aadharBackImage: String!
-  panImage: String!
-  selfieImage: String!
-  verificationCode: String!
-}
-
-
-type Mutation {
-  getPresignedS3Url(fileName: String!, fileType: String!): PresignedUrlResponse!
-}
-
-type PresignedUrlResponse {
-  url: String!
 }

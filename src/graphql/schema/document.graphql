@@ -47,15 +47,3 @@ input DocumentVerificationInput {
   selfieImage: String!
   verificationCode: String!
 }
-
-type Query {
-  getDocumentVerification: DocumentVerification
-  getDocumentVerificationStatus: String
-}
-
-type Mutation {
-  submitDocumentVerification(input: DocumentVerificationInput!): DocumentVerification!
-  updateDocumentVerification(id: ID!, input: DocumentVerificationInput!): DocumentVerification!
-  verifyDocument(id: ID!, documentType: String!, verified: Boolean!): DocumentVerification!
-  updateVerificationStatus(id: ID!, status: String!, rejectionReason: String): DocumentVerification!
-}

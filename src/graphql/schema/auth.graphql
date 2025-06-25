@@ -3,7 +3,8 @@ type AuthPayload {
   userId: ID!
 }
 
-type Mutation {
-  requestOtp(phone: String!): Boolean!
-  verifyOtp(phone: String!, otp: String!): AuthPayload!
+type UserProfile {
+  name: String!
+  phone: String!
+  role: String!
 }

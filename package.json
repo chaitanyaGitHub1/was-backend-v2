@@ -12,6 +12,8 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@graphql-tools/load-files": "^7.0.1",
+    "@graphql-tools/merge": "^9.0.24",
     "@graphql-tools/schema": "^10.0.23",
     "apollo-server-express": "^3.13.0",
     "aws-sdk": "^2.1692.0",

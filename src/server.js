@@ -30,6 +30,8 @@ async function startServer() {
 
   //   // Create Apollo Server
   const apolloServer = new ApolloServer({
+      typeDefs,
+  resolvers,
     schema,
     introspection: true, // Enable introspection
     context: ({ req }) => {

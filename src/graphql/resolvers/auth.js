@@ -5,6 +5,7 @@ module.exports = {
   Mutation: {
     async requestOtp(_, { phone }) {
   // Generate OTP and save to user
+  console.log(`Requesting OTP for phone: ${phone}`);
   const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
   const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
 
