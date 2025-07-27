@@ -1,0 +1,38 @@
+type Message {
+  sender: User!
+  content: String!
+  sentAt: String!
+  fileUrl: String
+  fileType: String
+  imageUrl: String
+  fileName: String
+}
+
+type Chat {
+  id: ID!
+  participants: [User!]!
+  messages: [Message!]!
+  createdAt: String!
+}
+
+extend type Query {
+  getChats: [Chat!]!
+  getChat(chatId: ID!): Chat
+}
+
+extend type Mutation {
+  sendMessage(
+    chatId: ID!, 
+    content: String!, 
+    fileUrl: String, 
+    fileType: String, 
+    imageUrl: String, 
+    fileName: String
+  ): Chat!
+  createChat(participantIds: [ID!]!): Chat!
+}
+
+extend type Subscription {
+  messageSent(chatId: ID!): Chat
+  newChat(userId: ID!): Chat
+}

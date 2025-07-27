@@ -1,67 +1,97 @@
 const express = require('express');
 const { ApolloServer } = require('apollo-server-express');
-const { createServer } = require('http');
+const http = require('http');
 const { execute, subscribe } = require('graphql');
-const { SubscriptionServer } = require('subscriptions-transport-ws');
 const { makeExecutableSchema } = require('@graphql-tools/schema');
+const { WebSocketServer } = require('ws');
+const { useServer } = require('graphql-ws/lib/use/ws'); 
 const { connectMongo } = require('./db/mongo');
-const { connectPostgres } = require('./db/postgres');
 const typeDefs = require('./graphql/schema');
 const resolvers = require('./graphql/resolvers');
-const cors = require('cors');
-const authMiddleware = require('./middleware/authMiddleware');
+const authMiddleware = require('./middleware/auth');
+const { parse } = require('graphql');
 require('dotenv').config();
 
+const app = express();
+app.use(express.json());
+const httpServer = http.createServer(app);
+
 async function startServer() {
-  // Initialize Express
-  const app = express();
-  app.use(cors());
-  app.use(express.json());
-
-  // Connect to databases
   await connectMongo();
-  // await connectPostgres();
-
-  //   // Create HTTP server
-  const httpServer = createServer(app);
-
-  //   // Set up GraphQL schema
+  
   const schema = makeExecutableSchema({ typeDefs, resolvers });
 
-  //   // Create Apollo Server
+  // Set up WebSocket server for subscriptions
+  const wsServer = new WebSocketServer({
+    server: httpServer,
+    path: '/graphql',
+  });
+
+// In your startServer function
+const serverCleanup = useServer({
+  schema,
+  execute,  // Add this line
+  subscribe, // Add this line
+  context: (ctx) => {
+    console.log("WebSocket connection established");
+    console.log("Connection params:", ctx.connectionParams);
+    return { user: ctx.connectionParams?.authToken ? { /* user details */ } : null };
+  },
+  onConnect: (ctx) => {
+    console.log("Client connected to WebSocket");
+    return true;
+  },
+  onSubscribe: (ctx, msg) => {
+    console.log("Client subscribing to:", msg.payload.operationName);
+    console.log("With variables:", msg.payload.variables);
+    // Important: Return an execution result or execution arguments
+    return {
+      schema,
+      operationName: msg.payload.operationName,
+      document: msg.payload.query ? parse(msg.payload.query) : undefined,
+      variableValues: msg.payload.variables,
+      contextValue: ctx
+    };
+  },
+  onNext: (ctx, msg, args, result) => {
+    console.log("Sending subscription data:", result);
+    return result;
+  },
+}, wsServer);
+
   const apolloServer = new ApolloServer({
-      typeDefs,
-  resolvers,
     schema,
-    introspection: true, // Enable introspection
+    introspection: true,
+    plugins: [{
+      async serverWillStart() {
+        return {
+          async drainServer() {
+            await serverCleanup.dispose();
+          },
+        };
+      },
+    }],
     context: ({ req }) => {
       try {
-        // Attempt to authenticate the user
         const user = authMiddleware({ req });
         return { user };
       } catch (err) {
-        // If authentication fails, return an empty context for unauthenticated operations
         return {};
       }
     },
   });
+  
   await apolloServer.start();
   apolloServer.applyMiddleware({ app });
 
-  // Set up subscriptions for real-time features
-  SubscriptionServer.create(
-    { schema, execute, subscribe },
-    { server: httpServer, path: apolloServer.graphqlPath }
-  );
-
-  // Start server
   const PORT = process.env.PORT || 4000;
   httpServer.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running at http://localhost:${PORT}${apolloServer.graphqlPath}`);
-    console.log(`Subscriptions available at ws://localhost:${PORT}${apolloServer.graphqlPath}`);
+    console.log(`Subscriptions available at ws://localhost:${PORT}/graphql`);
   });
 }
 
-startServer().catch(err => {
-  console.error('Failed to start server:', err);
+startServer().catch(error => {
+  console.error('Failed to start server:', error);
+  process.exit(1);
 });

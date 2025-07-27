@@ -1,0 +1,105 @@
+type LoanRequest {
+  id: ID!
+  borrower: User!
+  amount: Float!
+  purpose: String!
+  durationMonths: Int!
+  creditScore: Int
+  securityType: SecurityType!
+  collateral: Collateral
+  description: String
+  status: LoanStatus!
+  interestedLenders: [LenderInterest]
+  selectedLender: User
+  agreement: LoanAgreement
+  createdAt: String!
+  updatedAt: String!
+}
+
+enum SecurityType {
+  SECURED
+  UNSECURED
+}
+
+enum LoanStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  FUNDED
+  CANCELLED
+}
+
+type Collateral {
+  type: CollateralType!
+  estimatedValue: Float!
+  documents: [CollateralDocument]
+}
+
+enum CollateralType {
+  REAL_ESTATE
+  GOLD
+  AUTOMOBILE
+  STOCKS
+  OTHER
+}
+
+type CollateralDocument {
+  type: String!
+  url: String!
+  name: String
+  uploadedAt: String!
+}
+
+type LenderInterest {
+  lender: User!
+  interestRate: Float!
+  message: String
+  timestamp: String!
+}
+
+type LoanAgreement {
+  interestRate: Float!
+  startDate: String!
+  endDate: String!
+  termsAccepted: Boolean!
+}
+
+input LoanRequestInput {
+  amount: Float!
+  purpose: String!
+  durationMonths: Int!
+  creditScore: Int
+  securityType: SecurityType!
+  collateralType: CollateralType
+  collateralValue: Float
+  description: String
+}
+
+input CollateralDocumentInput {
+  loanRequestId: ID!
+  type: String!
+  url: String!
+  name: String
+}
+
+extend type Query {
+  getLoanRequests(status: LoanStatus): [LoanRequest!]!
+  getLoanRequest(id: ID!): LoanRequest
+  getMyLoanRequests: [LoanRequest!]!
+  getAvailableLoanRequests: [LoanRequest!]!
+}
+
+extend type Mutation {
+  createLoanRequest(input: LoanRequestInput!): LoanRequest!
+  updateLoanStatus(id: ID!, status: LoanStatus!): LoanRequest!
+  addCollateralDocument(input: CollateralDocumentInput!): LoanRequest!
+  expressInterest(loanRequestId: ID!, interestRate: Float!, message: String): LoanRequest!
+  selectLender(loanRequestId: ID!, lenderId: ID!): LoanRequest!
+  acceptLoanTerms(loanRequestId: ID!): LoanRequest!
+}
+
+extend type Subscription {
+  newLoanRequest: LoanRequest
+  loanRequestUpdated(id: ID!): LoanRequest
+  loanInterestReceived(borrowerId: ID!): LoanRequest
+}

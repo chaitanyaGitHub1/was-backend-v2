@@ -2,18 +2,30 @@ const authResolvers = require('./auth');
 const userResolvers = require('./user');
 const documentResolvers = require('./document');
 const s3Resolvers = require('./s3');
+const chatResolvers = require('./chat');
+const loanResolvers = require('./loan'); // Add this line
 
-// Combine all resolvers
+
+
 const resolvers = {
   Query: {
     _empty: () => '',
-    ...userResolvers.Query, // Add user resolvers
-    ...documentResolvers.Query, // Add document resolvers
+    ...userResolvers.Query,
+    ...documentResolvers.Query,
+    ...chatResolvers.Query,
+    ...loanResolvers.Query, // Add this line
+    // Remove duplicate userResolvers.Query
   },
   Mutation: {
     ...authResolvers.Mutation,
-    ...documentResolvers.Mutation, // Add document mutation resolvers
+    ...documentResolvers.Mutation,
     ...s3Resolvers.Mutation, 
+    ...chatResolvers.Mutation,
+    ...loanResolvers.Mutation, // Add this line
+  },
+  Subscription: {
+    ...chatResolvers.Subscription,
+    ...loanResolvers.Subscription, // Add this line
   }
 };
 
