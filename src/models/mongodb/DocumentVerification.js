@@ -31,7 +31,7 @@ const DocumentVerificationSchema = new Schema({
     },
     selfie: {
       image: { type: String, required: true },
-      verificationCode: { type: String, required: true },
+      verificationCode: { type: String },
       verified: { type: Boolean, default: false }
     }
   },

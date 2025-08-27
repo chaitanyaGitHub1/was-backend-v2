@@ -83,7 +83,7 @@ input CollateralDocumentInput {
 }
 
 extend type Query {
-  getLoanRequests(status: LoanStatus): [LoanRequest!]!
+  getLoanRequests(status: LoanStatus, page: Int, limit: Int): [LoanRequest!]!
   getLoanRequest(id: ID!): LoanRequest
   getMyLoanRequests: [LoanRequest!]!
   getAvailableLoanRequests: [LoanRequest!]!

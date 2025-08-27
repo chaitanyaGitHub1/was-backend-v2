@@ -34,25 +34,25 @@ const LoanRequestSchema = new Schema({
   securityType: {
     type: String,
     required: true,
-    enum: ['secured', 'unsecured']
+    enum: [ 'SECURED', 'UNSECURED' ]
   },
   
   // Collateral (only required if securityType is 'secured')
   collateral: {
     type: {
       type: String,
-      enum: ['Real Estate', 'Gold', 'Automobile', 'Stocks', 'Other'],
-      required: function() { return this.securityType === 'secured'; }
+      enum: ['REAL_ESTATE', 'GOLD', 'AUTOMOBILE', 'STOCKS', 'OTHER'],
+      required: function() { return this.securityType === 'SECURED'; }
     },
     estimatedValue: {
       type: Number,
       min: 0,
-      required: function() { return this.securityType === 'secured'; }
+      required: function() { return this.securityType === 'SECURED'; }
     },
     documents: [{
       type: {
         type: String,
-        enum: ['photo', 'pdf']
+        enum: ['PHOTO', 'PDF']
       },
       url: String,
       name: String,
@@ -69,8 +69,8 @@ const LoanRequestSchema = new Schema({
   // Status tracking
   status: {
     type: String,
-    enum: ['pending', 'approved', 'rejected', 'funded', 'cancelled'],
-    default: 'pending'
+    enum: ['PENDING', 'APPROVED', 'REJECTED', 'FUNDED', 'CANCELLED'],
+    default: 'PENDING'
   },
   
   // Interested lenders (multiple lenders might be interested)

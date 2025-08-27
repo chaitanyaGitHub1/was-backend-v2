@@ -36,14 +36,30 @@ type Selfie {
   verified: Boolean!
 }
 
+input AadharCardInput {
+  frontImage: String!
+  backImage: String!
+}
+
+input PanCardInput {
+  image: String!
+}
+
+input SelfieInput {
+  image: String!
+  verificationCode: String!
+}
+
+input DocumentsInput {
+  aadharCard: AadharCardInput!
+  panCard: PanCardInput!
+  selfie: SelfieInput!
+}
+
 input DocumentVerificationInput {
   fullName: String!
   dateOfBirth: String!
   address: String!
   gender: String!
-  aadharFrontImage: String!
-  aadharBackImage: String!
-  panImage: String!
-  selfieImage: String!
-  verificationCode: String!
+  documents: DocumentsInput!
 }

@@ -79,7 +79,13 @@ const UserSchema = new Schema({
         enum: ['IncomeProof', 'Employment', 'Collateral'] 
       },
       url: String
-    }]
+    }],
+    ratings: [{
+    stars: { type: Number, min: 1, max: 5 },
+    comment: String,
+    reviewer: { type: Schema.Types.ObjectId, ref: 'User' },
+    createdAt: { type: Date, default: Date.now }
+  }]
   },
 
   // System Metadata

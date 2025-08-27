@@ -1,11 +1,44 @@
-type User {
-  id: ID!
+type Profile {
   name: String!
-  phone: String!
-  role: String!
   avatar: String
   bio: String
+  location: Location
 }
+
+type Location {
+  type: String
+  coordinates: [Float]
+}
+
+type BorrowerProfile {
+  requestedAmount: Float
+  loanPurpose: String
+  creditScore: Int
+  supportingDocs: [SupportingDoc]
+  ratings: [Rating]
+}
+
+type SupportingDoc {
+  type: String
+  url: String
+}
+
+type Rating {
+  stars: Int
+  comment: String
+  reviewer: User
+  createdAt: String
+}
+
+type User {
+  id: ID!
+  phone: String!
+  role: String!
+  profile: Profile
+  borrowerProfile: BorrowerProfile
+  # other fields
+}
+
 
 extend type Query {
   getBorrowers: [User!]!
