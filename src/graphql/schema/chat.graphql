@@ -11,8 +11,9 @@ type Message {
 type Chat {
   id: ID!
   participants: [User!]!
-  messages: [Message!]!
+  messages(limit: Int): [Message!]!  # Add limit parameter
   createdAt: String!
+  unreadCount: Int  # Add unreadCount field
 }
 
 extend type Query {

@@ -9,6 +9,9 @@ type Query {
   getUserProfile: UserProfile!
   getDocumentVerification: DocumentVerification
   getDocumentVerificationStatus: String
+  getLenderPosts(page: Int, limit: Int): [LenderPost!]!
+  getLenderPost(userId: ID!): LenderPost
+  getMyLenderPost: LenderPost
 }
 
 type Mutation {
@@ -20,6 +23,8 @@ type Mutation {
   updateVerificationStatus(id: ID!, status: String!, rejectionReason: String): DocumentVerification!
   getPresignedS3Url(fileName: String!, fileType: String!): PresignedUrlResponse!
   getPresignedS3GetUrl(fileName: String!): PresignedUrlResponse!
+  createOrUpdateLenderPost(input: LenderPostInput!): LenderPost!
+  deleteMyLenderPost: Boolean!
 }
 
 # Add this type definition

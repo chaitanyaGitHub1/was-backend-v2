@@ -27,7 +27,7 @@ module.exports = {
           type: 'Point',
           coordinates: [0, 0] // Default coordinates (longitude, latitude)
         }
-        // OR completely remove the location property here
+        // OR completely remove the location property here15
       }
     });
   } else {

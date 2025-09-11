@@ -1,0 +1,23 @@
+type LenderPost {
+  id: ID!
+  user: User!
+  availableAmount: Float!
+  interestRange: InterestRange!
+  loanTypes: [String!]!
+  bio: String!
+  isVerified: Boolean!
+  createdAt: String!
+}
+
+type InterestRange {
+  min: Float!
+  max: Float!
+}
+
+input LenderPostInput {
+  availableAmount: Float!
+  interestRangeMin: Float!
+  interestRangeMax: Float!
+  loanTypes: [String!]!
+  bio: String!
+}

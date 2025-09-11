@@ -51,6 +51,8 @@ module.exports = {
         if (!context.user) throw new Error("Authentication required");
         const allParticipants = [context.user.userId, ...participantIds];
 
+        console.log("Creating chat with participants:", allParticipants);
+
         // Find existing chat with exactly these participants
         let chat = await Chat.findOne({
           participants: {
@@ -65,6 +67,15 @@ module.exports = {
             .populate("participants")
             .populate("messages.sender");
           return chat;
+        }
+
+        // Add this check before creating chat
+        const usersExist = await User.countDocuments({
+          _id: { $in: allParticipants },
+        });
+
+        if (usersExist !== allParticipants.length) {
+          throw new Error("One or more participants do not exist");
         }
 
         // If not found, create new chat
@@ -226,4 +237,67 @@ module.exports = {
       },
     },
   },
+  Chat: {
+    participants: async (chat) => {
+      try {
+        // Fetch users with full data
+        const users = await User.find({
+          _id: { $in: chat.participants },
+        });
+
+        // Debug users being returned
+        console.log(`Found ${users.length} participants for chat ${chat._id}`);
+
+        // Map to ensure all required fields have values
+        return users.map((user) => ({
+          id: user._id,
+          // Ensure name is never null - critical fix
+          name: user.profile?.name || "Unknown User",
+          role: user.role || "unknown",
+          avatar: user.profile?.avatar || null,
+          phone: user.auth?.phone || null,
+          bio: user.profile?.bio || null,
+          // Add any other fields needed
+        }));
+      } catch (error) {
+        console.error(`Error resolving chat ${chat._id} participants:`, error);
+        // Return empty array rather than failing entirely
+        return [];
+      }
+    },
+
+    // New resolvers for message preview
+    latestMessage: async (chat) => {
+      if (chat.messages && chat.messages.length > 0) {
+        return chat.messages[chat.messages.length - 1];
+      }
+      return null;
+    },
+
+    messages: async (chat, args, context) => {
+      // Support limit parameter
+      const { limit } = args;
+      let messages = chat.messages || [];
+
+      // If limit is provided, return only the latest messages
+      if (limit && limit > 0 && messages.length > limit) {
+        messages = messages.slice(-limit);
+      }
+
+      return messages;
+    },
+
+    unreadCount: async (chat, _, context) => {
+      if (!context.user) return 0;
+
+      // Count messages not from current user that aren't read
+      return (chat.messages || []).reduce((count, msg) => {
+        if (msg.sender.toString() !== context.user.userId && 
+            !msg.readBy?.includes(context.user.userId)) {
+          return count + 1;
+        }
+        return count;
+      }, 0);
+    }
+  }
 };

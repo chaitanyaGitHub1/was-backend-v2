@@ -30,16 +30,26 @@ type Rating {
   createdAt: String
 }
 
-type User {
-  id: ID!
-  phone: String!
-  role: String!
-  profile: Profile
-  borrowerProfile: BorrowerProfile
-  # other fields
+type UserProfile {
+  name: String!
+  avatar: String
+  bio: String
+  location: Location
 }
 
 
+type User {
+  id: ID!
+  name: String!
+  phone: String
+  role: String!
+  avatar: String
+  bio: String
+  profile: Profile
+  borrowerProfile: BorrowerProfile
+}
+
 extend type Query {
+  getUserProfile: UserProfile!
   getBorrowers: [User!]!
 }
