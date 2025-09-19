@@ -1,6 +1,8 @@
 type AuthPayload {
   token: String!
   userId: ID!
+  documentSubmitted: Boolean!
+  
 }
 
 type UserProfile {

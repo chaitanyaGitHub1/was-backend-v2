@@ -69,21 +69,21 @@ module.exports = {
           address: input.address,
           gender: input.gender,
           documents: {
-  aadharCard: {
-    frontImage: input.documents.aadharCard.frontImage,
-    backImage: input.documents.aadharCard.backImage,
-    verified: false
-  },
-  panCard: {
-    image: input.documents.panCard.image,
-    verified: false
-  },
-  selfie: {
-    image: input.documents.selfie.image,
-    verificationCode: input.documents.selfie.verificationCode,
-    verified: false
-  }
-},
+            aadharCard: {
+              frontImage: input.documents.aadharCard.frontImage,
+              backImage: input.documents.aadharCard.backImage,
+              verified: false,
+            },
+            panCard: {
+              image: input.documents.panCard.image,
+              verified: false,
+            },
+            selfie: {
+              image: input.documents.selfie.image,
+              verificationCode: input.documents.selfie.verificationCode,
+              verified: false,
+            },
+          },
           verificationStatus: "pending",
         });
 
@@ -101,7 +101,7 @@ module.exports = {
         console.log("Updating user profile...");
         const user = await User.findById(userId);
         console.log("Found user:", user);
-
+60+6
         if (
           user &&
           user.profile &&
@@ -109,6 +109,7 @@ module.exports = {
           user.profile.name.startsWith("User-")
         ) {
           user.profile.name = input.fullName;
+          user.documentSubmitted = true;
           await user.save();
           console.log("User profile updated");
         }

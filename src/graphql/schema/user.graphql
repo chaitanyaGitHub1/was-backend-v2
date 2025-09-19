@@ -47,6 +47,7 @@ type User {
   bio: String
   profile: Profile
   borrowerProfile: BorrowerProfile
+  documentSubmitted: Boolean
 }
 
 extend type Query {

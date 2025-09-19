@@ -33,7 +33,6 @@ module.exports = {
         .populate('borrower')
         .populate('selectedLender')
         .populate('interestedLenders.lender');
-80
       if (!loanRequest) throw new Error('Loan request not found');
       return loanRequest;
     },
