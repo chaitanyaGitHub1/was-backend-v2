@@ -122,6 +122,8 @@ LoanRequestSchema.pre('save', function(next) {
 });
 
 // Add indexes for common queries
+LoanRequestSchema.set('toJSON', { virtuals: true });
+LoanRequestSchema.set('toObject', { virtuals: true });
 LoanRequestSchema.index({ borrower: 1, status: 1 });
 LoanRequestSchema.index({ status: 1, createdAt: -1 });
 LoanRequestSchema.index({ selectedLender: 1 });

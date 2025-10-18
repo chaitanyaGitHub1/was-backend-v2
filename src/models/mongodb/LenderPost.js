@@ -14,4 +14,7 @@ const LenderPost = new Schema({
   createdAt: { type: Date, default: Date.now },
 });
 
+LenderPost.set('toJSON', { virtuals: true });
+LenderPost.set('toObject', { virtuals: true });
+
 module.exports = mongoose.model('LenderPost', LenderPost);

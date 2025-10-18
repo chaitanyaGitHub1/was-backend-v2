@@ -5,6 +5,7 @@ const s3Resolvers = require('./s3');
 const chatResolvers = require('./chat');
 const loanResolvers = require('./loan'); // Add this line
 const lenderPostResolver = require('./LenderPost'); // Add this line
+const searchResolvers = require('./search'); // Add this line
 
 
 
@@ -17,7 +18,7 @@ const resolvers = {
     ...chatResolvers.Query,
     ...loanResolvers.Query, // Add this line
     ...lenderPostResolver.Query, // Add this line
-    // Remove duplicate userResolvers.Query
+    ...searchResolvers.Query, 
   },
   Mutation: {
     ...authResolvers.Mutation,

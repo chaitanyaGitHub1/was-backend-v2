@@ -4,6 +4,16 @@ schema {
   subscription: Subscription
 }
 
+union SearchResult = LenderPost | LoanRequest
+enum SearchFilter {
+  LENDERS
+  LOAN_REQUESTS
+}
+enum SecurityType {
+  SECURED
+  UNSECURED
+} 
+
 type Query {
   _empty: String
   getUserProfile: UserProfile!
@@ -12,6 +22,14 @@ type Query {
   getLenderPosts(page: Int, limit: Int): [LenderPost!]!
   getLenderPost(userId: ID!): LenderPost
   getMyLenderPost: LenderPost
+
+    search(
+    query: String!
+    filter: SearchFilter!
+    securityType: SecurityType # Optional filter for SECURED/UNSECURED
+    page: Int
+    limit: Int
+  ): [SearchResult!]!
 }
 
 type Mutation {
