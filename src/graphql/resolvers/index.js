@@ -27,6 +27,7 @@ const resolvers = {
     ...chatResolvers.Mutation,
     ...loanResolvers.Mutation, // Add this line
     ...lenderPostResolver.Mutation, // Add this line
+    ...userResolvers.Mutation,
   },
   Subscription: {
     ...chatResolvers.Subscription,

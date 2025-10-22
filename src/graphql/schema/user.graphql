@@ -35,8 +35,10 @@ type UserProfile {
   avatar: String
   bio: String
   location: Location
+  email: String
+  phone: String
+  documentSubmitted: Boolean
 }
-
 
 type User {
   id: ID!
@@ -53,4 +55,32 @@ type User {
 extend type Query {
   getUserProfile: UserProfile!
   getBorrowers: [User!]!
+}
+
+input UpdateProfileInput {
+  name: String
+  avatar: String
+  bio: String
+  email: String
+  location: LocationInput
+}
+
+input LocationInput {
+  type: String
+  coordinates: [Float]
+}
+
+input UpdatePhoneInput {
+  newPhone: String!
+}
+
+input VerifyPhoneUpdateInput {
+  newPhone: String!
+  otp: String!
+}
+
+extend type Mutation {
+  updateProfile(input: UpdateProfileInput!): UserProfile
+  requestPhoneUpdateOtp(input: UpdatePhoneInput!): Boolean!
+  verifyPhoneUpdate(input: VerifyPhoneUpdateInput!): UserProfile!
 }

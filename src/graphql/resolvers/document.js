@@ -101,7 +101,6 @@ module.exports = {
         console.log("Updating user profile...");
         const user = await User.findById(userId);
         console.log("Found user:", user);
-60+6
         if (
           user &&
           user.profile &&

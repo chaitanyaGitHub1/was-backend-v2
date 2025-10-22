@@ -14,6 +14,7 @@ const UserSchema = new Schema({
       code: { type: String },
       expiresAt: { type: Date },
       attempts: { type: Number, default: 0 },
+      newPhone: { type: String }, // Add this field for phone updates
     },
   },
 
