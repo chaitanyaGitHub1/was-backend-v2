@@ -9,17 +9,44 @@ const NEW_CHAT = "NEW_CHAT";
 module.exports = {
   Query: {
     async getChats(_, __, context) {
-      console.log("=== DEBUG getChats ===");
-      if (!context.user) {
-        console.error("Authentication required");
-        throw new Error("Authentication required");
+      try {
+        console.log("=== DEBUG getChats START ===");
+
+        if (!context.user) {
+          console.error("Authentication required - no user in context");
+          throw new Error("Authentication required");
+        }
+
+        console.log("Fetching chats for user:", context.user.userId);
+
+        const chats = await Chat.find({ participants: context.user.userId })
+          .populate("participants")
+          .populate("messages.sender")
+          .sort({ updatedAt: -1 }); // Sort by most recent
+
+        console.log(`Found ${chats.length} chats for user ${context.user.userId}`);
+
+        // Filter out chats with null participants (orphaned chats)
+        const validChats = chats.filter((chat) => {
+          const hasValidParticipants = chat.participants.every((p) => p !== null);
+          if (!hasValidParticipants) {
+            console.warn(`Chat ${chat._id} has null participants - filtering out`);
+          }
+          return hasValidParticipants;
+        });
+
+        console.log(`Returning ${validChats.length} valid chats`);
+        console.log("=== DEBUG getChats END ===");
+
+        return validChats;
+      } catch (error) {
+        console.error("=== ERROR in getChats ===");
+        console.error("Error type:", error.name);
+        console.error("Error message:", error.message);
+        console.error("Error stack:", error.stack);
+        console.error("User ID:", context.user?.userId);
+        throw new Error(`Failed to fetch chats: ${error.message}`);
       }
-      console.log("Fetching chats for user:", context.user.userId);
-      const chats = await Chat.find({ participants: context.user.userId })
-        .populate("participants")
-        .populate("messages.sender");
-      console.log("Found chats:", chats.length);
-      return chats;
     },
 
     async getChat(_, { chatId }, context) {
@@ -103,66 +130,72 @@ module.exports = {
       context
     ) {
       if (!context.user) throw new Error("Authentication required");
+
       const chat = await Chat.findById(chatId);
       if (!chat) {
         throw new Error("Chat not found");
       }
 
-      // Add message with all possible fields
+      console.log(
+        "Sending message to chat:",
+        chatId,
+        "from user:",
+        context.user.userId
+      );
+      console.log("Message data:", {
+        content,
+        imageUrl,
+        fileUrl,
+        fileName,
+        fileType,
+      });
+
+      // Add message with all fields
       chat.messages.push({
         sender: context.user.userId,
         content,
-        fileUrl,
-        fileType,
-        imageUrl,
-        fileName,
+        imageUrl: imageUrl || null,
+        fileUrl: fileUrl || null,
+        fileName: fileName || null,
+        fileType: fileType || null,
         sentAt: Date.now().toString(),
       });
 
       await chat.save();
 
-      // Better population approach - get the index of the new message
-      const newMessageIndex = chat.messages.length - 1;
-
-      // Populate both participants and messages.sender
+      // Populate the chat with all necessary data
       const populatedChat = await Chat.findById(chatId)
-        .populate("participants")
+        .populate({
+          path: "participants",
+          select: "name email profile", // Select the fields you need
+        })
         .populate({
           path: "messages.sender",
-          model: "User", // Make sure this matches your User model name
+          model: "User",
+          select: "name email profile",
         });
 
-      // Debug population
-      console.log(
-        "Message sender populated:",
-        populatedChat.messages[newMessageIndex].sender ? "Yes" : "No",
-        "ID:",
-        populatedChat.messages[newMessageIndex].sender?._id || "Missing"
-      );
-
+      // Convert to plain object
       const plainChat = populatedChat.toObject
         ? populatedChat.toObject()
         : JSON.parse(JSON.stringify(populatedChat));
 
-      // Fix the ID field - MongoDB uses _id but GraphQL expects id
+      // Fix ID fields
       plainChat.id = plainChat._id.toString();
 
-      // Fix IDs in nested objects too and ensure sender is never null
+      // Fix message IDs and ensure sender data
       if (plainChat.messages && Array.isArray(plainChat.messages)) {
         plainChat.messages = plainChat.messages.map((msg) => {
           msg.id = msg._id.toString();
 
-          // Ensure sender is always properly populated
           if (msg.sender && msg.sender._id) {
             msg.sender.id = msg.sender._id.toString();
           } else {
-            // If sender is missing, use a placeholder or the current user
-
+            // Fallback if sender is not populated
             msg.sender = {
               id: context.user.userId.toString(),
               name: "Unknown User",
               email: "unknown@example.com",
-              // Remove the duplicate name line and the "so" typo
             };
           }
 
@@ -170,36 +203,32 @@ module.exports = {
         });
       }
 
-    // Add after your messages handling block (around line 152)
-    // Fix IDs and ensure required fields exist for participants
-    if (plainChat.participants && Array.isArray(plainChat.participants)) {
-      plainChat.participants = plainChat.participants.map(participant => {
-        // Fix ID
-        participant.id = participant._id.toString();
-        
-        // Ensure name is always present (required by your schema)
-        if (!participant.name) {
-          participant.name = "Unknown User";
-        }
-        
-        // Add other required fields if missing
-        if (!participant.email) {
-          participant.email = "unknown@example.com";
-        }
-        
-        return participant;
+      // Fix participant IDs
+      if (plainChat.participants && Array.isArray(plainChat.participants)) {
+        plainChat.participants = plainChat.participants.map((participant) => {
+          participant.id = participant._id.toString();
+
+          if (!participant.name) {
+            participant.name = "Unknown User";
+          }
+
+          if (!participant.email) {
+            participant.email = "unknown@example.com";
+          }
+
+          return participant;
+        });
+      }
+
+      console.log("Publishing message with image/file data:", {
+        hasImage: !!plainChat.messages[plainChat.messages.length - 1].imageUrl,
+        hasFile: !!plainChat.messages[plainChat.messages.length - 1].fileUrl,
       });
-    }
 
-    // Add debug logging before publishing
-    console.log("Publishing chat with participants:", 
-      plainChat.participants.map(p => ({id: p.id, name: p.name || "MISSING NAME"}))
-    );
-
-    // Now publish the correctly transformed object
-    pubsub.publish(`${MESSAGE_SENT}.${chatId}`, { 
-      messageSent: plainChat
-    });
+      // Publish to subscription
+      pubsub.publish(`${MESSAGE_SENT}.${chatId}`, {
+        messageSent: plainChat,
+      });
 
       return populatedChat;
     },
@@ -292,12 +321,14 @@ module.exports = {
 
       // Count messages not from current user that aren't read
       return (chat.messages || []).reduce((count, msg) => {
-        if (msg.sender.toString() !== context.user.userId && 
-            !msg.readBy?.includes(context.user.userId)) {
+        if (
+          msg.sender.toString() !== context.user.userId &&
+          !msg.readBy?.includes(context.user.userId)
+        ) {
           return count + 1;
         }
         return count;
       }, 0);
-    }
-  }
+    },
+  },
 };

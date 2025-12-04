@@ -1,12 +1,14 @@
 type Message {
+  id: ID!
   sender: User!
   content: String!
-  sentAt: String!
-  fileUrl: String
-  fileType: String
   imageUrl: String
+  fileUrl: String
   fileName: String
+  fileType: String
+  sentAt: String!
 }
+
 
 type Chat {
   id: ID!
@@ -23,12 +25,12 @@ extend type Query {
 
 extend type Mutation {
   sendMessage(
-    chatId: ID!, 
-    content: String!, 
-    fileUrl: String, 
-    fileType: String, 
-    imageUrl: String, 
+    chatId: ID!
+    content: String!
+    imageUrl: String
+    fileUrl: String
     fileName: String
+    fileType: String
   ): Chat!
   createChat(participantIds: [ID!]!): Chat!
 }

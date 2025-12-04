@@ -4,7 +4,11 @@ const { Schema } = mongoose;
 const MessageSchema = new Schema({
   sender: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   content: { type: String, required: true },
-  sentAt: { type: Date, default: Date.now }
+  imageUrl: { type: String }, // Add this for image S3 URLs
+  fileUrl: { type: String }, // Add this for file S3 URLs
+  fileName: { type: String }, // Add this for file names
+  fileType: { type: String }, // Add this for file types (image, file, etc.)
+  sentAt: { type: String, default: () => Date.now().toString() } // Changed to String to match your usage
 });
 
 const ChatSchema = new Schema({
