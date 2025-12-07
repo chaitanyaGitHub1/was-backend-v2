@@ -5,20 +5,27 @@ const { execute, subscribe } = require('graphql');
 const { makeExecutableSchema } = require('@graphql-tools/schema');
 const { WebSocketServer } = require('ws');
 const { useServer } = require('graphql-ws/lib/use/ws'); 
+const { ApolloServerPluginLandingPageLocalDefault } = require('apollo-server-core');
 const { connectMongo } = require('./db/mongo');
 const typeDefs = require('./graphql/schema');
 const resolvers = require('./graphql/resolvers');
 const authMiddleware = require('./middleware/auth');
 const { parse } = require('graphql');
 require('dotenv').config();
+const cors = require('cors');
 
 const app = express();
+app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
 const httpServer = http.createServer(app);
 
 app.use((req, res, next) => {
-  console.log(`[HTTP ${req.method}] ${req.originalUrl}`);
+  console.log(`[HTTP ${req.method}] ${req.originalUrl} | Origin: ${req.headers.origin}`);
   next();
+});
+
+app.get('/', (req, res) => {
+  res.send('Server is running. Go to <a href="/graphql">/graphql</a> to use the GraphQL Playground.');
 });
 
 async function startServer() {
@@ -69,7 +76,9 @@ const serverCleanup = useServer({
   const apolloServer = new ApolloServer({
   schema,
   introspection: true,
-  plugins: [{
+  plugins: [
+    ApolloServerPluginLandingPageLocalDefault({ embed: true }),
+    {
     async serverWillStart() {
       console.log("Apollo Server starting...");
       return {
@@ -94,7 +103,7 @@ const serverCleanup = useServer({
 
   
   await apolloServer.start();
-  apolloServer.applyMiddleware({ app });
+  apolloServer.applyMiddleware({ app, cors: false });
 
   const PORT = process.env.PORT || 4000;
   httpServer.listen(PORT, () => {

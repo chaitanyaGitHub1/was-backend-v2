@@ -122,10 +122,9 @@ const UserSchema = new Schema({
 UserSchema.index({ "profile.location": "2dsphere" }); // Geolocation searches
 UserSchema.index({ role: 1 }); // Role-based filtering
 UserSchema.index({ "auth.phone": 1, "auth.otp.expiresAt": 1 }); // Faster OTP validation
-UserSchema.index({ "auth.phone": 1 }, { unique: true }); // Phone-based indexing
+// UserSchema.index({ "auth.phone": 1 }, { unique: true }); // Removed duplicate index
 UserSchema.index({ "auth.otp.expiresAt": 1 }, { expireAfterSeconds: 0 });
-UserSchema.index({ "auth.email": 1 }, { unique: true, sparse: true }); // Email indexing (sparse for
-// optional field)
+// UserSchema.index({ "auth.email": 1 }, { unique: true, sparse: true }); // Removed duplicate index
 UserSchema.set("toJSON", { virtuals: true });
 UserSchema.set("toObject", { virtuals: true });
 // Virtual for deep design requirements

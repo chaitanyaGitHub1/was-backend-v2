@@ -6,12 +6,12 @@ schema {
 
 union SearchResult = LenderPost | LoanRequest
 enum SearchFilter {
-  LENDERS5869
+  LENDERS
   LOAN_REQUESTS
 }
 enum SecurityType {
   SECURED
-  UNSECURED87
+  UNSECURED
 } 
 
 type Query {

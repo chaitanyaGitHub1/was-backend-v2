@@ -30,8 +30,8 @@ enum LoanStatus {
 }
 
 type Collateral {
-  type: CollateralType!
-  estimatedValue: Float!
+  type: CollateralType
+  estimatedValue: Float
   documents: [CollateralDocument]
 }
 

@@ -13,6 +13,10 @@ module.exports = {
   if (!context.user) throw new Error("Authentication required");
 
   const query = status ? { status } : {};
+  // Add filter to exclude loan requests with null borrowers
+  query.borrower = { $exists: true, $ne: null };
+  // Exclude current user's own loan requests
+  query.borrower.$ne = context.user.userId;
 
   const skip = (page - 1) * limit;
 
@@ -24,7 +28,8 @@ module.exports = {
     .skip(skip)
     .limit(limit);
 
-  return loanRequests;
+  // Extra safety: filter out any that still have null borrowers after populate
+  return loanRequests.filter(lr => lr.borrower != null);
 },
     async getLoanRequest(_, { id }, context) {
       if (!context.user) throw new Error('Authentication required');

@@ -8,16 +8,27 @@ module.exports = {
       
       try {
         const skip = (page - 1) * limit;
-        const posts = await LenderPost.find()
+        // Exclude current user's own lender posts
+        const posts = await LenderPost.find({ user: { $ne: context.user.userId } })
           .populate('user')
           .skip(skip)
           .limit(limit)
           .sort({ createdAt: -1 });
         
+        console.log(`[getLenderPosts] Found ${posts.length} total posts`);
+        posts.forEach((post, idx) => {
+          console.log(`[getLenderPosts] Post ${idx}:`, {
+            id: post._id,
+            userId: post.user?._id || 'NULL',
+            userName: post.user?.profile?.name || 'NO NAME',
+            availableAmount: post.availableAmount
+          });
+        });
+        
         // Filter out posts where user is null (orphaned posts)
         const validPosts = posts.filter(post => post.user);
         
-        console.log(`Filtered ${posts.length - validPosts.length} orphaned lender posts`);
+        console.log(`[getLenderPosts] Returning ${validPosts.length} valid posts (filtered out ${posts.length - validPosts.length} orphaned posts)`);
         
         return validPosts;
       } catch (error) {
