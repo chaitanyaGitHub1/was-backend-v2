@@ -6,7 +6,10 @@ module.exports = {
     async requestOtp(_, { phone }) {
   // Generate OTP and save to user
   console.log(`Requesting OTP for phone: ${phone}`);
-  const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+  
+  // Use default OTP for test mode (demo purposes)
+  const isTestMode = process.env.TEST_MODE === 'true';
+  const otpCode = isTestMode ? '000000' : Math.floor(100000 + Math.random() * 900000).toString();
   const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
 
   let user = await User.findOne({ 'auth.phone': phone });
