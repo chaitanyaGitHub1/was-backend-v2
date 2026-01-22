@@ -66,6 +66,13 @@ const LoanRequestSchema = new Schema({
   // Additional Details
   description: String,
 
+  // Geolocation for the request
+  location: {
+    type: { type: String, enum: ['Point'], default: 'Point' },
+    coordinates: { type: [Number], default: [0, 0] },
+    formattedAddress: { type: String },
+  },
+
   // Status tracking
   status: {
     type: String,
@@ -138,5 +145,8 @@ LoanRequestSchema.virtual('endDate').get(function() {
   }
   return null;
 });
+
+// Geolocation index
+LoanRequestSchema.index({ location: '2dsphere' });
 
 module.exports = mongoose.model('LoanRequest', LoanRequestSchema);

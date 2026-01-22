@@ -8,6 +8,7 @@ type LoanRequest {
   securityType: SecurityType!
   collateral: Collateral
   description: String
+  location: Location
   status: LoanStatus!
   interestedLenders: [LenderInterest]
   selectedLender: User
@@ -73,6 +74,7 @@ input LoanRequestInput {
   collateralType: CollateralType
   collateralValue: Float
   description: String
+  location: LocationInput
 }
 
 input CollateralDocumentInput {

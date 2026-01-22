@@ -6,6 +6,7 @@ type LenderPost {
   loanTypes: [String!]!
   bio: String!
   isVerified: Boolean!
+  location: Location
   createdAt: String!
 }
 
@@ -20,4 +21,5 @@ input LenderPostInput {
   interestRangeMax: Float!
   loanTypes: [String!]!
   bio: String!
+  location: LocationInput
 }

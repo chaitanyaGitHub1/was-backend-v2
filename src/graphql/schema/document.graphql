@@ -5,6 +5,7 @@ type DocumentVerification {
   dateOfBirth: String!
   address: String!
   gender: String!
+  location: Location
   documents: Documents!
   verificationStatus: String!
   rejectionReason: String
@@ -60,6 +61,7 @@ input DocumentVerificationInput {
   fullName: String!
   dateOfBirth: String!
   address: String!
+  location: LocationInput
   gender: String!
   documents: DocumentsInput!
 }

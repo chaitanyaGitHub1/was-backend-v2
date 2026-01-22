@@ -28,6 +28,30 @@ app.get('/', (req, res) => {
   res.send('Server is running. Go to <a href="/graphql">/graphql</a> to use the GraphQL Playground.');
 });
 
+// Detailed Logging Plugin for Apollo
+const loggingPlugin = {
+  async requestDidStart(requestContext) {
+    const startTime = Date.now();
+    const op = requestContext.request.operationName || 'Unnamed Op';
+    console.log(`\n--- [GraphQL Request] ${op} ---`);
+    if (requestContext.request.variables) {
+      console.log('Variables:', JSON.stringify(requestContext.request.variables, null, 2));
+    }
+
+    return {
+      async didEncounterErrors(rc) {
+        console.error(`[GraphQL Error] in ${op}:`, rc.errors);
+      },
+      async willSendResponse(rc) {
+        const duration = Date.now() - startTime;
+        console.log(`--- [GraphQL Response] ${op} (${duration}ms) ---`);
+        // Optional: Log response data (careful with large payloads)
+        // console.log('Response:', JSON.stringify(rc.response.data, null, 2));
+      },
+    };
+  },
+};
+
 async function startServer() {
   await connectMongo();
   
@@ -45,7 +69,7 @@ const serverCleanup = useServer({
   execute,
   subscribe,
   context: (ctx) => {
-    console.log("[WS] Connection established. Params:", ctx.connectionParams);
+    console.log("[WS] Connection established.");
     return { user: ctx.connectionParams?.authToken ? { /* user details */ } : null };
   },
   onConnect: (ctx) => {
@@ -53,8 +77,7 @@ const serverCleanup = useServer({
     return true;
   },
   onSubscribe: (ctx, msg) => {
-    console.log("[WS] Subscribing to operation:", msg.payload.operationName);
-    console.log("[WS] Query:", msg.payload.query);
+    console.log(`[WS] Subscribing: ${msg.payload.operationName || 'Unnamed'}`);
     return {
       schema,
       operationName: msg.payload.operationName,
@@ -78,6 +101,7 @@ const serverCleanup = useServer({
   introspection: true,
   plugins: [
     ApolloServerPluginLandingPageLocalDefault({ embed: true }),
+    loggingPlugin, // Added detailed logging
     {
     async serverWillStart() {
       console.log("Apollo Server starting...");
@@ -91,11 +115,10 @@ const serverCleanup = useServer({
   }],
   context: ({ req }) => {
     try {
-      console.log("Processing context for request...", req.headers);
       const user = authMiddleware({ req });
       return { user };
     } catch (err) {
-      console.log("AuthMiddleware error:", err.message);
+      // console.log("AuthMiddleware error:", err.message);
       return {};
     }
   },

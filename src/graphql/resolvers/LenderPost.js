@@ -84,8 +84,13 @@ module.exports = {
           interestRangeMin, 
           interestRangeMax, 
           loanTypes, 
-          bio 
+          bio,
+          location
         } = input;
+
+        // Fetch user to get profile location
+        const user = await User.findById(context.user.userId);
+        const userLocation = user?.location || user?.profile?.location;
         
         // Validate bio length
         if (bio.length < 100) {
@@ -95,6 +100,13 @@ module.exports = {
         // Find existing post or create new one
         let post = await LenderPost.findOne({ user: context.user.userId });
         
+        const locationData = location ? {
+          type: 'Point',
+          coordinates: location.coordinates,
+          formattedAddress: location.formattedAddress,
+          city: location.city
+        } : userLocation;
+
         if (post) {
           // Update existing post
           post.availableAmount = availableAmount;
@@ -104,6 +116,7 @@ module.exports = {
           };
           post.loanTypes = loanTypes;
           post.bio = bio;
+          post.location = locationData;
         } else {
           // Create new post
           post = new LenderPost({
@@ -114,7 +127,8 @@ module.exports = {
               max: interestRangeMax
             },
             loanTypes,
-            bio
+            bio,
+            location: locationData
           });
         }
         

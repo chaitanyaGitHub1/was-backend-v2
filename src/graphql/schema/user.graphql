@@ -6,8 +6,10 @@ type Profile {
 }
 
 type Location {
-  type: String
-  coordinates: [Float]
+  type: String!
+  coordinates: [Float!]!
+  formattedAddress: String
+  city: String
 }
 
 type BorrowerProfile {
@@ -66,8 +68,9 @@ input UpdateProfileInput {
 }
 
 input LocationInput {
-  type: String
-  coordinates: [Float]
+  coordinates: [Float!]!
+  formattedAddress: String
+  city: String
 }
 
 input UpdatePhoneInput {

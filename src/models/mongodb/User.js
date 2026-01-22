@@ -23,7 +23,7 @@ const UserSchema = new Schema({
     default: false
   },
 
-  // Profile Configuration (From UX Pilot "Context" section)
+  // Profile Configuration
   role: {
     type: String,
     required: true,
@@ -35,14 +35,16 @@ const UserSchema = new Schema({
   profile: {
     name: { type: String, required: true },
     avatar: { type: String }, // URL for "Image" checkbox
-    bio: { type: String, maxlength: 500 }, // "Min. $ characters"
+    bio: { type: String, maxlength: 500 },
     location: {
-      type: { type: String },
-      coordinates: { type: [Number], default: undefined },
+      type: { type: String, enum: ['Point'], default: 'Point' },
+      coordinates: { type: [Number], default: [0, 0] }, // [longitude, latitude]
+      formattedAddress: { type: String },
+      city: { type: String },
     },
   },
 
-  // Lender-Specific Data (When role includes 'lender')
+  // Lender-Specific Data
   lenderProfile: {
     availableAmount: { type: Number, min: 0 },
     interestRange: {
@@ -75,7 +77,7 @@ const UserSchema = new Schema({
     ],
   },
 
-  // Borrower-Specific Data (When role includes 'borrower')
+  // Borrower-Specific Data
   borrowerProfile: {
     requestedAmount: { type: Number, min: 0 },
     loanPurpose: { type: String },
@@ -118,16 +120,15 @@ const UserSchema = new Schema({
   ],
 });
 
-// Indexes for critical queries
-UserSchema.index({ "profile.location": "2dsphere" }); // Geolocation searches
-UserSchema.index({ role: 1 }); // Role-based filtering
-UserSchema.index({ "auth.phone": 1, "auth.otp.expiresAt": 1 }); // Faster OTP validation
-// UserSchema.index({ "auth.phone": 1 }, { unique: true }); // Removed duplicate index
+// Indexes
+UserSchema.index({ "profile.location": "2dsphere" });
+UserSchema.index({ role: 1 });
+UserSchema.index({ "auth.phone": 1, "auth.otp.expiresAt": 1 });
 UserSchema.index({ "auth.otp.expiresAt": 1 }, { expireAfterSeconds: 0 });
-// UserSchema.index({ "auth.email": 1 }, { unique: true, sparse: true }); // Removed duplicate index
+
 UserSchema.set("toJSON", { virtuals: true });
 UserSchema.set("toObject", { virtuals: true });
-// Virtual for deep design requirements
+
 UserSchema.virtual("fullProfile").get(function () {
   return {
     role: this.role,

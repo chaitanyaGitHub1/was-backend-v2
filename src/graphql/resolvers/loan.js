@@ -81,8 +81,13 @@ module.exports = {
       try {
         const {
           amount, purpose, durationMonths, creditScore,
-          securityType, collateralType, collateralValue, description
+          securityType, collateralType, collateralValue, description,
+          location
         } = input;
+
+        // Fetch user to get profile location as fallback
+        const user = await User.findById(context.user.userId);
+        const userLocation = user?.location || (user?.profile?.location);
 
         const mappedCollateralType = collateralType
           ? collateralType.toUpperCase().replace(/\s/g, '_')
@@ -99,6 +104,12 @@ module.exports = {
             creditScore,
             securityType,
             description,
+            location: location ? {
+              type: 'Point',
+              coordinates: location.coordinates,
+              formattedAddress: location.formattedAddress,
+              city: location.city
+            } : userLocation,
             collateral: securityType === 'SECURED' ? {
               type: mappedCollateralType,
               estimatedValue: collateralValue,

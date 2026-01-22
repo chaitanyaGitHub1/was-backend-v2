@@ -67,6 +67,12 @@ module.exports = {
           fullName: input.fullName,
           dateOfBirth: input.dateOfBirth,
           address: input.address,
+          location: input.location ? {
+            type: 'Point',
+            coordinates: input.location.coordinates,
+            formattedAddress: input.location.formattedAddress,
+            city: input.location.city
+          } : undefined,
           gender: input.gender,
           documents: {
             aadharCard: {
@@ -101,16 +107,18 @@ module.exports = {
         console.log("Updating user profile...");
         const user = await User.findById(userId);
         console.log("Found user:", user);
-        if (
-          user &&
-          user.profile &&
-          user.profile.name &&
-          user.profile.name.startsWith("User-")
-        ) {
-          user.profile.name = input.fullName;
+        if (user) {
+          // Sync location to user profile
+          if (documentVerification.location) {
+            user.location = documentVerification.location;
+          }
+          
+          if (user.profile && user.profile.name && user.profile.name.startsWith("User-")) {
+            user.profile.name = input.fullName;
+          }
           user.documentSubmitted = true;
           await user.save();
-          console.log("User profile updated");
+          console.log("User profile updated (location and status synced)");
         }
 
         console.log("=== DEBUG END ===");
