@@ -13,17 +13,18 @@ const searchResolvers = require('./search'); // Add this line
 const resolvers = {
   Query: {
     _empty: () => '',
+    ...authResolvers.Query,
     ...userResolvers.Query,
     ...documentResolvers.Query,
     ...chatResolvers.Query,
     ...loanResolvers.Query, // Add this line
     ...lenderPostResolver.Query, // Add this line
-    ...searchResolvers.Query, 
+    ...searchResolvers.Query,
   },
   Mutation: {
     ...authResolvers.Mutation,
     ...documentResolvers.Mutation,
-    ...s3Resolvers.Mutation, 
+    ...s3Resolvers.Mutation,
     ...chatResolvers.Mutation,
     ...loanResolvers.Mutation, // Add this line
     ...lenderPostResolver.Mutation, // Add this line

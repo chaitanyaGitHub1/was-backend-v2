@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - User Verification</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .login-box {
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            max-width: 400px;
+            margin: 100px auto;
+        }
+
+        .dashboard {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            display: none;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+
+        input[type="password"],
+        input[type="text"],
+        textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            margin-bottom: 20px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus,
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background: #5568d3;
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .user-card {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border-left: 4px solid #667eea;
+        }
+
+        .user-info {
+            margin-bottom: 15px;
+        }
+
+        .user-info p {
+            margin: 5px 0;
+            color: #555;
+        }
+
+        .user-info strong {
+            color: #333;
+        }
+
+        .actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .actions button {
+            width: auto;
+            padding: 8px 20px;
+            font-size: 14px;
+        }
+
+        .btn-approve {
+            background: #10b981;
+        }
+
+        .btn-approve:hover {
+            background: #059669;
+        }
+
+        .btn-decline {
+            background: #ef4444;
+        }
+
+        .btn-decline:hover {
+            background: #dc2626;
+        }
+
+        .btn-logout {
+            background: #6b7280;
+            margin-top: 20px;
+        }
+
+        .btn-logout:hover {
+            background: #4b5563;
+        }
+
+        .error {
+            color: #ef4444;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        .success {
+            color: #10b981;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #6b7280;
+        }
+
+        .empty-state svg {
+            width: 80px;
+            height: 80px;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+
+        .badge-yes {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .badge-no {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 500px;
+            width: 90%;
+        }
+
+        .modal-content h3 {
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .modal-actions button {
+            width: 50%;
+        }
+
+        .doc-section {
+            margin-top: 20px;
+            border-top: 1px solid #e0e0e0;
+            padding-top: 15px;
+        }
+
+        .doc-section h4 {
+            margin-bottom: 15px;
+            color: #4b5563;
+        }
+
+        .doc-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 15px;
+        }
+
+        .doc-item {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .doc-item img {
+            width: 100%;
+            height: 100px;
+            object-fit: cover;
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
+            transition: transform 0.2s;
+        }
+
+        .doc-item img:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .doc-item span {
+            font-size: 11px;
+            font-weight: 600;
+            color: #6b7280;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <!-- Login Box -->
+        <div class="login-box" id="loginBox">
+            <h1>🔐 Admin Login</h1>
+            <div id="loginError" class="error"></div>
+            <input type="password" id="passwordInput" placeholder="Enter admin password" />
+            <button onclick="login()">Login</button>
+        </div>
+
+        <!-- Dashboard -->
+        <div class="dashboard" id="dashboard">
+            <h1>👥 User Verification Dashboard</h1>
+            <div id="successMessage" class="success"></div>
+            <div id="usersContainer"></div>
+            <button class="btn-logout" onclick="logout()">Logout</button>
+        </div>
+    </div>
+
+    <!-- Decline Modal -->
+    <div class="modal" id="declineModal">
+        <div class="modal-content">
+            <h3>Decline User Verification</h3>
+            <p>Please provide a reason for declining this user:</p>
+            <textarea id="declineNote" rows="4" placeholder="Enter reason..."></textarea>
+            <div class="modal-actions">
+                <button onclick="closeDeclineModal()">Cancel</button>
+                <button class="btn-decline" onclick="confirmDecline()">Decline</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = '/graphql';
+        let adminPassword = '';
+        let currentDeclineUserId = null;
+
+        // Check if already logged in
+        const savedPassword = sessionStorage.getItem('adminPassword');
+        if (savedPassword) {
+            adminPassword = savedPassword;
+            showDashboard();
+        }
+
+        async function login() {
+            const password = document.getElementById('passwordInput').value;
+            if (!password) {
+                showError('Please enter a password');
+                return;
+            }
+
+            try {
+                // Test password by fetching pending users
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        query: `
+                            query GetPendingUsers($adminPassword: String!) {
+                                getPendingUsers(adminPassword: $adminPassword) {
+                                    id
+                                }
+                            }
+                        `,
+                        variables: { adminPassword: password }
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.errors) {
+                    showError(data.errors[0].message);
+                    return;
+                }
+
+                adminPassword = password;
+                sessionStorage.setItem('adminPassword', password);
+                showDashboard();
+            } catch (error) {
+                showError('Failed to connect to server');
+            }
+        }
+
+        function showError(message) {
+            document.getElementById('loginError').textContent = message;
+        }
+
+        function showDashboard() {
+            document.getElementById('loginBox').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'block';
+            loadPendingUsers();
+        }
+
+        async function loadPendingUsers() {
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        query: `
+                            query GetPendingUsers($adminPassword: String!) {
+                                getPendingUsers(adminPassword: $adminPassword) {
+                                    id
+                                    profile {
+                                        name
+                                    }
+                                    phone
+                                    email
+                                    role
+                                    documentSubmitted
+                                    createdAt
+                                    documents {
+                                        aadharCard {
+                                            frontImage
+                                            backImage
+                                            verified
+                                        }
+                                        panCard {
+                                            image
+                                            verified
+                                        }
+                                        selfie {
+                                            image
+                                            verificationCode
+                                            verified
+                                        }
+                                    }
+                                }
+                            }
+                        `,
+                        variables: { adminPassword }
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.errors) {
+                    document.getElementById('usersContainer').innerHTML = `<div class="error">Error: ${data.errors[0].message}</div>`;
+                    return;
+                }
+
+                displayUsers(data.data.getPendingUsers);
+            } catch (error) {
+                document.getElementById('usersContainer').innerHTML = `<div class="error">Failed to load users: ${error.message}</div>`;
+            }
+        }
+
+        function displayUsers(users) {
+            const container = document.getElementById('usersContainer');
+
+            if (users.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <h3>No pending verifications</h3>
+                        <p>All users have been verified!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = users.map(user => `
+                <div class="user-card">
+                    <div class="user-info">
+                        <p><strong>Name:</strong> ${user.profile.name}</p>
+                        <p><strong>Phone:</strong> ${user.phone}</p>
+                        <p><strong>Email:</strong> ${user.email || 'Not provided'}</p>
+                        <p><strong>Role:</strong> ${user.role}</p>
+                        <p><strong>Documents Submitted:</strong> 
+                            <span class="badge ${user.documentSubmitted ? 'badge-yes' : 'badge-no'}">
+                                ${user.documentSubmitted ? 'Yes' : 'No'}
+                            </span>
+                        </p>
+                        <p><strong>Registered:</strong> ${new Date(parseInt(user.createdAt)).toLocaleString()}</p>
+                        ${renderDocuments(user.documents)}
+                    </div>
+                    <div class="actions">
+                        <button class="btn-approve" onclick="approveUser('${user.id}')">✓ Approve</button>
+                        <button class="btn-decline" onclick="openDeclineModal('${user.id}')">✗ Decline</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderDocuments(docs) {
+            if (!docs) return '';
+
+            return `
+                <div class="doc-section">
+                    <h4>📂 Submitted Documents</h4>
+                    <div class="doc-grid">
+                        ${docs.aadharCard ? `
+                            <div class="doc-item">
+                                <span>Aadhar Front</span>
+                                <a href="${docs.aadharCard.frontImage || '#'}" target="_blank">
+                                    <img src="${docs.aadharCard.frontImage || 'https://via.placeholder.com/150?text=No+Image'}" alt="Aadhar Front" />
+                                </a>
+                            </div>
+                            <div class="doc-item">
+                                <span>Aadhar Back</span>
+                                <a href="${docs.aadharCard.backImage || '#'}" target="_blank">
+                                    <img src="${docs.aadharCard.backImage || 'https://via.placeholder.com/150?text=No+Image'}" alt="Aadhar Back" />
+                                </a>
+                            </div>
+                        ` : ''}
+                        
+                        ${docs.panCard ? `
+                            <div class="doc-item">
+                                <span>PAN Card</span>
+                                <a href="${docs.panCard.image || '#'}" target="_blank">
+                                    <img src="${docs.panCard.image || 'https://via.placeholder.com/150?text=No+Image'}" alt="PAN Card" />
+                                </a>
+                            </div>
+                        ` : ''}
+
+                        ${docs.selfie ? `
+                            <div class="doc-item">
+                                <span>Selfie (Code: ${docs.selfie.verificationCode})</span>
+                                <a href="${docs.selfie.image || '#'}" target="_blank">
+                                    <img src="${docs.selfie.image || 'https://via.placeholder.com/150?text=No+Image'}" alt="Selfie" />
+                                </a>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div >
+                `;
+        }
+
+        async function approveUser(userId) {
+            if (!confirm('Are you sure you want to approve this user?')) return;
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        query: `
+                            mutation ApproveUser($userId: ID!, $adminPassword: String!) {
+                approveUser(userId: $userId, adminPassword: $adminPassword) {
+                    id
+                    verificationStatus
+                }
+            }
+            `,
+                        variables: { userId, adminPassword }
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.errors) {
+                    alert('Error: ' + data.errors[0].message);
+                    return;
+                }
+
+                showSuccess('User approved successfully!');
+                loadPendingUsers();
+            } catch (error) {
+                alert('Failed to approve user');
+            }
+        }
+
+        function openDeclineModal(userId) {
+            currentDeclineUserId = userId;
+            document.getElementById('declineModal').classList.add('active');
+        }
+
+        function closeDeclineModal() {
+            currentDeclineUserId = null;
+            document.getElementById('declineNote').value = '';
+            document.getElementById('declineModal').classList.remove('active');
+        }
+
+        async function confirmDecline() {
+            const note = document.getElementById('declineNote').value.trim();
+            if (!note) {
+                alert('Please provide a reason for declining');
+                return;
+            }
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        query: `
+                            mutation DeclineUser($userId: ID!, $note: String!, $adminPassword: String!) {
+                declineUser(userId: $userId, note: $note, adminPassword: $adminPassword) {
+                    id
+                    verificationStatus
+                }
+            }
+                        `,
+                        variables: {
+                            userId: currentDeclineUserId,
+                            note,
+                            adminPassword
+                        }
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.errors) {
+                    alert('Error: ' + data.errors[0].message);
+                    return;
+                }
+
+                showSuccess('User declined successfully');
+                closeDeclineModal();
+                loadPendingUsers();
+            } catch (error) {
+                alert('Failed to decline user');
+            }
+        }
+
+        function showSuccess(message) {
+            const el = document.getElementById('successMessage');
+            el.textContent = message;
+            setTimeout(() => el.textContent = '', 3000);
+        }
+
+        function logout() {
+            sessionStorage.removeItem('adminPassword');
+            location.reload();
+        }
+
+        // Enter key to login
+        document.getElementById('passwordInput')?.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') login();
+        });
+    </script>
+</body>
+
+</html>

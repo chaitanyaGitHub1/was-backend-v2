@@ -34,20 +34,20 @@ const LoanRequestSchema = new Schema({
   securityType: {
     type: String,
     required: true,
-    enum: [ 'SECURED', 'UNSECURED' ]
+    enum: ['SECURED', 'UNSECURED']
   },
-  
+
   // Collateral (only required if securityType is 'secured')
   collateral: {
     type: {
       type: String,
       enum: ['REAL_ESTATE', 'GOLD', 'AUTOMOBILE', 'STOCKS', 'OTHER'],
-      required: function() { return this.securityType === 'SECURED'; }
+      required: function () { return this.securityType === 'SECURED'; }
     },
     estimatedValue: {
       type: Number,
       min: 0,
-      required: function() { return this.securityType === 'SECURED'; }
+      required: function () { return this.securityType === 'SECURED'; }
     },
     documents: [{
       type: {
@@ -76,10 +76,16 @@ const LoanRequestSchema = new Schema({
   // Status tracking
   status: {
     type: String,
-    enum: ['PENDING', 'APPROVED', 'REJECTED', 'FUNDED', 'CANCELLED'],
+    enum: ['PENDING', 'APPROVED', 'REJECTED', 'FUNDED', 'CANCELLED', 'LOAN_RECEIVED_PENDING'],
     default: 'PENDING'
   },
-  
+
+  // Link to active loan (once loan tracking begins)
+  linkedLoan: {
+    type: Schema.Types.ObjectId,
+    ref: 'Loan'
+  },
+
   // Interested lenders (multiple lenders might be interested)
   interestedLenders: [{
     lender: {
@@ -93,13 +99,13 @@ const LoanRequestSchema = new Schema({
       default: Date.now
     }
   }],
-  
+
   // Selected lender (once borrower selects one)
   selectedLender: {
     type: Schema.Types.ObjectId,
     ref: 'User'
   },
-  
+
   // Final agreement details (once terms are set)
   agreement: {
     interestRate: Number,
@@ -110,7 +116,7 @@ const LoanRequestSchema = new Schema({
       default: false
     }
   },
-  
+
   // System metadata
   createdAt: {
     type: Date,
@@ -123,7 +129,7 @@ const LoanRequestSchema = new Schema({
 });
 
 // Update the updatedAt field on save
-LoanRequestSchema.pre('save', function(next) {
+LoanRequestSchema.pre('save', function (next) {
   this.updatedAt = Date.now();
   next();
 });
@@ -137,7 +143,7 @@ LoanRequestSchema.index({ selectedLender: 1 });
 LoanRequestSchema.index({ 'interestedLenders.lender': 1 });
 
 // Add virtual for loan term calculations
-LoanRequestSchema.virtual('endDate').get(function() {
+LoanRequestSchema.virtual('endDate').get(function () {
   if (this.agreement && this.agreement.startDate) {
     const endDate = new Date(this.agreement.startDate);
     endDate.setMonth(endDate.getMonth() + this.durationMonths);

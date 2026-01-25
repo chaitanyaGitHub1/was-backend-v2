@@ -1,10 +1,11 @@
+const path = require('path');
 const express = require('express');
 const { ApolloServer } = require('apollo-server-express');
 const http = require('http');
 const { execute, subscribe } = require('graphql');
 const { makeExecutableSchema } = require('@graphql-tools/schema');
 const { WebSocketServer } = require('ws');
-const { useServer } = require('graphql-ws/lib/use/ws'); 
+const { useServer } = require('graphql-ws/lib/use/ws');
 const { ApolloServerPluginLandingPageLocalDefault } = require('apollo-server-core');
 const { connectMongo } = require('./db/mongo');
 const typeDefs = require('./graphql/schema');
@@ -26,6 +27,12 @@ app.use((req, res, next) => {
 
 app.get('/', (req, res) => {
   res.send('Server is running. Go to <a href="/graphql">/graphql</a> to use the GraphQL Playground.');
+});
+
+// Serve admin panel
+app.use(express.static(path.join(__dirname, '../public')));
+app.get('/admin', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/admin.html'));
 });
 
 // Detailed Logging Plugin for Apollo
@@ -54,7 +61,7 @@ const loggingPlugin = {
 
 async function startServer() {
   await connectMongo();
-  
+
   const schema = makeExecutableSchema({ typeDefs, resolvers });
 
   // Set up WebSocket server for subscriptions
@@ -63,68 +70,68 @@ async function startServer() {
     path: '/graphql',
   });
 
-// In your startServer function
-const serverCleanup = useServer({
-  schema,
-  execute,
-  subscribe,
-  context: (ctx) => {
-    console.log("[WS] Connection established.");
-    return { user: ctx.connectionParams?.authToken ? { /* user details */ } : null };
-  },
-  onConnect: (ctx) => {
-    console.log("[WS] Client connected.");
-    return true;
-  },
-  onSubscribe: (ctx, msg) => {
-    console.log(`[WS] Subscribing: ${msg.payload.operationName || 'Unnamed'}`);
-    return {
-      schema,
-      operationName: msg.payload.operationName,
-      document: msg.payload.query ? parse(msg.payload.query) : undefined,
-      variableValues: msg.payload.variables,
-      contextValue: ctx
-    };
-  },
-  onNext: (ctx, msg, args, result) => {
-    console.log("[WS] Sending subscription result:", result);
-    return result;
-  },
-  onError: (ctx, msg, error) => {
-    console.error("[WS] Subscription error:", error);
-  }
-}, wsServer);
+  // In your startServer function
+  const serverCleanup = useServer({
+    schema,
+    execute,
+    subscribe,
+    context: (ctx) => {
+      console.log("[WS] Connection established.");
+      return { user: ctx.connectionParams?.authToken ? { /* user details */ } : null };
+    },
+    onConnect: (ctx) => {
+      console.log("[WS] Client connected.");
+      return true;
+    },
+    onSubscribe: (ctx, msg) => {
+      console.log(`[WS] Subscribing: ${msg.payload.operationName || 'Unnamed'}`);
+      return {
+        schema,
+        operationName: msg.payload.operationName,
+        document: msg.payload.query ? parse(msg.payload.query) : undefined,
+        variableValues: msg.payload.variables,
+        contextValue: ctx
+      };
+    },
+    onNext: (ctx, msg, args, result) => {
+      console.log("[WS] Sending subscription result:", result);
+      return result;
+    },
+    onError: (ctx, msg, error) => {
+      console.error("[WS] Subscription error:", error);
+    }
+  }, wsServer);
 
 
   const apolloServer = new ApolloServer({
-  schema,
-  introspection: true,
-  plugins: [
-    ApolloServerPluginLandingPageLocalDefault({ embed: true }),
-    loggingPlugin, // Added detailed logging
-    {
-    async serverWillStart() {
-      console.log("Apollo Server starting...");
-      return {
-        async drainServer() {
-          console.log("Apollo Server shutting down...");
-          await serverCleanup.dispose();
+    schema,
+    introspection: true,
+    plugins: [
+      ApolloServerPluginLandingPageLocalDefault({ embed: true }),
+      loggingPlugin, // Added detailed logging
+      {
+        async serverWillStart() {
+          console.log("Apollo Server starting...");
+          return {
+            async drainServer() {
+              console.log("Apollo Server shutting down...");
+              await serverCleanup.dispose();
+            },
+          };
         },
-      };
+      }],
+    context: ({ req }) => {
+      try {
+        const user = authMiddleware({ req });
+        return { user };
+      } catch (err) {
+        // console.log("AuthMiddleware error:", err.message);
+        return {};
+      }
     },
-  }],
-  context: ({ req }) => {
-    try {
-      const user = authMiddleware({ req });
-      return { user };
-    } catch (err) {
-      // console.log("AuthMiddleware error:", err.message);
-      return {};
-    }
-  },
-});
+  });
 
-  
+
   await apolloServer.start();
   apolloServer.applyMiddleware({ app, cors: false });
 

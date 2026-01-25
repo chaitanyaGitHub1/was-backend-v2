@@ -2,7 +2,8 @@ type AuthPayload {
   token: String!
   userId: ID!
   documentSubmitted: Boolean!
-  
+  verificationStatus: String!
+  verificationNote: String
 }
 
 type UserProfile {

@@ -5,6 +5,12 @@ type Profile {
   location: Location
 }
 
+enum VerificationStatus {
+  PENDING_VERIFICATION
+  VERIFIED
+  DECLINED
+}
+
 type Location {
   type: String!
   coordinates: [Float!]!
@@ -40,6 +46,8 @@ type UserProfile {
   email: String
   phone: String
   documentSubmitted: Boolean
+  verificationStatus: VerificationStatus!
+  verificationNote: String
 }
 
 type User {
@@ -52,11 +60,50 @@ type User {
   profile: Profile
   borrowerProfile: BorrowerProfile
   documentSubmitted: Boolean
+  verificationStatus: VerificationStatus!
+  verificationNote: String
+  verifiedAt: String
+}
+
+type AdminUserDetail {
+  id: ID!
+  profile: Profile!
+  phone: String!
+  email: String
+  role: String!
+  documentSubmitted: Boolean!
+  verificationStatus: VerificationStatus!
+  createdAt: String!
+  documents: UserDocuments
+}
+
+type UserDocuments {
+  aadharCard: AadharCardDocs
+  panCard: PanCardDocs
+  selfie: SelfieDocs
+}
+
+type AadharCardDocs {
+  frontImage: String
+  backImage: String
+  verified: Boolean
+}
+
+type PanCardDocs {
+  image: String
+  verified: Boolean
+}
+
+type SelfieDocs {
+  image: String
+  verificationCode: String
+  verified: Boolean
 }
 
 extend type Query {
   getUserProfile: UserProfile!
   getBorrowers: [User!]!
+  getPendingUsers(adminPassword: String!): [AdminUserDetail!]!
 }
 
 input UpdateProfileInput {
@@ -86,4 +133,6 @@ extend type Mutation {
   updateProfile(input: UpdateProfileInput!): UserProfile
   requestPhoneUpdateOtp(input: UpdatePhoneInput!): Boolean!
   verifyPhoneUpdate(input: VerifyPhoneUpdateInput!): UserProfile!
+  approveUser(userId: ID!, adminPassword: String!): User!
+  declineUser(userId: ID!, note: String!, adminPassword: String!): User!
 }

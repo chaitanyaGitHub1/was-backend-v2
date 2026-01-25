@@ -1,4 +1,5 @@
 const LoanRequest = require('../../models/mongodb/LoanRequest');
+const Loan = require('../../models/mongodb/Loan');
 const User = require('../../models/mongodb/User');
 const pubsub = require('../../utils/pubsub');
 
@@ -9,28 +10,28 @@ const LOAN_INTEREST_RECEIVED = 'LOAN_INTEREST_RECEIVED';
 
 module.exports = {
   Query: {
- async getLoanRequests(_, { status, page = 1, limit = 10 }, context) {
-  if (!context.user) throw new Error("Authentication required");
+    async getLoanRequests(_, { status, page = 1, limit = 10 }, context) {
+      if (!context.user) throw new Error("Authentication required");
 
-  const query = status ? { status } : {};
-  // Add filter to exclude loan requests with null borrowers
-  query.borrower = { $exists: true, $ne: null };
-  // Exclude current user's own loan requests
-  query.borrower.$ne = context.user.userId;
+      const query = status ? { status } : {};
+      // Add filter to exclude loan requests with null borrowers
+      query.borrower = { $exists: true, $ne: null };
+      // Exclude current user's own loan requests
+      query.borrower.$ne = context.user.userId;
 
-  const skip = (page - 1) * limit;
+      const skip = (page - 1) * limit;
 
-  const loanRequests = await LoanRequest.find(query)
-    .populate("borrower")
-    .populate("selectedLender")
-    .populate("interestedLenders.lender")
-    .sort({ createdAt: -1 })
-    .skip(skip)
-    .limit(limit);
+      const loanRequests = await LoanRequest.find(query)
+        .populate("borrower")
+        .populate("selectedLender")
+        .populate("interestedLenders.lender")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit);
 
-  // Extra safety: filter out any that still have null borrowers after populate
-  return loanRequests.filter(lr => lr.borrower != null);
-},
+      // Extra safety: filter out any that still have null borrowers after populate
+      return loanRequests.filter(lr => lr.borrower != null);
+    },
     async getLoanRequest(_, { id }, context) {
       if (!context.user) throw new Error('Authentication required');
 
@@ -69,6 +70,145 @@ module.exports = {
         .sort({ createdAt: -1 });
 
       return loanRequests;
+    },
+
+    async getMyLoans(_, { type, status }, context) {
+      if (!context.user) throw new Error('Authentication required');
+
+      const query = {};
+
+      // Filter by type (borrowed or lended)
+      if (type === 'borrowed') {
+        query.borrower = context.user.userId;
+      } else if (type === 'lended') {
+        query.lender = context.user.userId;
+      } else {
+        throw new Error('Type must be either "borrowed" or "lended"');
+      }
+
+      // Filter by status if provided
+      if (status) {
+        query.status = status;
+      }
+
+      const loans = await Loan.find(query)
+        .populate('borrower')
+        .populate('lender')
+        .populate('loanRequest')
+        .populate('selectedLenderByBorrower')
+        .sort({ createdAt: -1 });
+
+      return loans;
+    },
+
+    async getLoanMetrics(_, __, context) {
+      if (!context.user) throw new Error('Authentication required');
+
+      // Get borrowed loans
+      const borrowedLoans = await Loan.find({ borrower: context.user.userId });
+      const lendedLoans = await Loan.find({ lender: context.user.userId });
+
+      // Calculate metrics
+      const totalBorrowed = borrowedLoans.reduce((sum, loan) => sum + loan.amount, 0);
+      const totalLended = lendedLoans.reduce((sum, loan) => sum + loan.amount, 0);
+
+      const activeBorrowedCount = borrowedLoans.filter(l =>
+        l.status === 'ACTIVE' || l.status === 'LOAN_RECEIVED_PENDING'
+      ).length;
+
+      const activeLendedCount = lendedLoans.filter(l =>
+        l.status === 'ACTIVE' || l.status === 'LOAN_RECEIVED_PENDING'
+      ).length;
+
+      const completedBorrowedCount = borrowedLoans.filter(l => l.status === 'COMPLETED').length;
+      const completedLendedCount = lendedLoans.filter(l => l.status === 'COMPLETED').length;
+
+      const totalToRepay = borrowedLoans
+        .filter(l => l.status === 'ACTIVE' || l.status === 'LOAN_RECEIVED_PENDING')
+        .reduce((sum, loan) => sum + loan.remainingAmount, 0);
+
+      const now = new Date();
+      const overdueLoans = borrowedLoans.filter(l =>
+        (l.status === 'ACTIVE' || l.status === 'LOAN_RECEIVED_PENDING') &&
+        l.dueDate &&
+        new Date(l.dueDate) < now &&
+        l.remainingAmount > 0
+      ).length;
+
+      return {
+        totalBorrowed,
+        totalLended,
+        activeBorrowedCount,
+        activeLendedCount,
+        completedBorrowedCount,
+        completedLendedCount,
+        totalToRepay,
+        overdueLoans
+      };
+    },
+
+    async getActiveLoan(_, __, context) {
+      if (!context.user) throw new Error('Authentication required');
+
+      const activeLoan = await Loan.findOne({
+        borrower: context.user.userId,
+        status: { $in: ['LOAN_RECEIVED_PENDING', 'ACTIVE'] }
+      })
+        .populate('borrower')
+        .populate('lender')
+        .populate('loanRequest')
+        .populate('selectedLenderByBorrower');
+
+      return activeLoan;
+    },
+
+    async getLoanHistory(_, { type, page = 1, limit = 10 }, context) {
+      if (!context.user) throw new Error('Authentication required');
+
+      const query = {};
+
+      if (type === 'borrowed') {
+        query.borrower = context.user.userId;
+      } else if (type === 'lended') {
+        query.lender = context.user.userId;
+      } else {
+        throw new Error('Type must be either "borrowed" or "lended"');
+      }
+
+      const skip = (page - 1) * limit;
+
+      const loans = await Loan.find(query)
+        .populate('borrower')
+        .populate('lender')
+        .populate('loanRequest')
+        .populate('selectedLenderByBorrower')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit);
+
+      return loans;
+    },
+
+    async getLoan(_, { id }, context) {
+      if (!context.user) throw new Error('Authentication required');
+
+      const loan = await Loan.findById(id)
+        .populate('borrower')
+        .populate('lender')
+        .populate('loanRequest')
+        .populate('selectedLenderByBorrower');
+
+      if (!loan) throw new Error('Loan not found');
+
+      // Check authorization
+      const isBorrower = loan.borrower._id.toString() === context.user.userId;
+      const isLender = loan.lender._id.toString() === context.user.userId;
+
+      if (!isBorrower && !isLender) {
+        throw new Error('Not authorized to view this loan');
+      }
+
+      return loan;
     }
   },
 
@@ -84,6 +224,26 @@ module.exports = {
           securityType, collateralType, collateralValue, description,
           location
         } = input;
+
+        // Check if user has an active loan
+        const activeLoan = await Loan.findOne({
+          borrower: context.user.userId,
+          status: { $in: ['LOAN_RECEIVED_PENDING', 'ACTIVE'] }
+        });
+
+        if (activeLoan) {
+          throw new Error('You already have an active loan. Please complete or close your existing loan before requesting a new one.');
+        }
+
+        // Check if user has a pending loan request
+        const pendingLoanRequest = await LoanRequest.findOne({
+          borrower: context.user.userId,
+          status: 'PENDING'
+        });
+
+        if (pendingLoanRequest) {
+          throw new Error('You already have a pending loan request. Please cancel your existing request or wait for it to be processed before creating a new one.');
+        }
 
         // Fetch user to get profile location as fallback
         const user = await User.findById(context.user.userId);
@@ -130,7 +290,7 @@ module.exports = {
           throw new Error('Failed to save loan request to database');
         }
 
-                let populatedLoanRequest = await LoanRequest.findById(loanRequest._id)
+        let populatedLoanRequest = await LoanRequest.findById(loanRequest._id)
           .populate('borrower')
           .populate('selectedLender')
           .populate('interestedLenders.lender');
@@ -369,6 +529,237 @@ module.exports = {
       });
 
       return populatedLoanRequest;
+    },
+
+    async markLoanAsReceived(_, { loanRequestId, lenderId }, context) {
+      if (!context.user) throw new Error('Authentication required');
+
+      const loanRequest = await LoanRequest.findById(loanRequestId);
+      if (!loanRequest) throw new Error('Loan request not found');
+
+      // Check if user is the borrower
+      if (loanRequest.borrower.toString() !== context.user.userId) {
+        throw new Error('Not authorized. Only the borrower can mark loan as received');
+      }
+
+      // Check if lender expressed interest
+      const lenderInterest = loanRequest.interestedLenders.find(
+        interest => interest.lender.toString() === lenderId
+      );
+
+      if (!lenderInterest) {
+        throw new Error('This lender has not expressed interest in your loan request');
+      }
+
+      // Create new Loan record
+      const loan = new Loan({
+        loanRequest: loanRequestId,
+        borrower: context.user.userId,
+        lender: lenderId,
+        amount: loanRequest.amount,
+        interestRate: lenderInterest.interestRate,
+        durationMonths: loanRequest.durationMonths,
+        status: 'LOAN_RECEIVED_PENDING',
+        borrowerConfirmed: true,
+        lenderConfirmed: false,
+        selectedLenderByBorrower: lenderId,
+        disbursementDate: new Date(),
+        remainingAmount: loanRequest.amount,
+        repayments: []
+      });
+
+      await loan.save();
+
+      // Update loan request
+      loanRequest.status = 'LOAN_RECEIVED_PENDING';
+      loanRequest.linkedLoan = loan._id;
+      await loanRequest.save();
+
+      // Populate and return
+      const populatedLoanRequest = await LoanRequest.findById(loanRequestId)
+        .populate('borrower')
+        .populate('selectedLender')
+        .populate('interestedLenders.lender')
+        .populate('linkedLoan');
+
+      return populatedLoanRequest;
+    },
+
+    async confirmLoanDisbursement(_, { loanId }, context) {
+      if (!context.user) throw new Error('Authentication required');
+
+      const loan = await Loan.findById(loanId);
+      if (!loan) throw new Error('Loan not found');
+
+      // Check if user is the lender
+      if (loan.lender.toString() !== context.user.userId) {
+        throw new Error('Not authorized. Only the lender can confirm disbursement');
+      }
+
+      // Check if loan is in pending state
+      if (loan.status !== 'LOAN_RECEIVED_PENDING') {
+        throw new Error('Loan is not in pending confirmation state');
+      }
+
+      // Set lender confirmed
+      loan.lenderConfirmed = true;
+      loan.confirmedDate = new Date();
+
+      // If both confirmed and lender matches borrower's selection, activate loan
+      if (loan.borrowerConfirmed &&
+        loan.selectedLenderByBorrower.toString() === context.user.userId) {
+        loan.status = 'ACTIVE';
+      }
+
+      await loan.save();
+
+      // Populate and return
+      const populatedLoan = await Loan.findById(loanId)
+        .populate('borrower')
+        .populate('lender')
+        .populate('loanRequest')
+        .populate('selectedLenderByBorrower');
+
+      return populatedLoan;
+    },
+
+    async recordRepayment(_, { input }, context) {
+      if (!context.user) throw new Error('Authentication required');
+
+      const { loanId, amount, note } = input;
+
+      const loan = await Loan.findById(loanId);
+      if (!loan) throw new Error('Loan not found');
+
+      // Check if user is the borrower
+      if (loan.borrower.toString() !== context.user.userId) {
+        throw new Error('Not authorized. Only the borrower can record repayments');
+      }
+
+      // Add repayment
+      loan.repayments.push({
+        amount,
+        paidDate: new Date(),
+        note
+      });
+
+      // Update totals
+      loan.totalRepaid += amount;
+      loan.remainingAmount = Math.max(0, loan.amount - loan.totalRepaid);
+
+      // Auto-complete if fully repaid
+      if (loan.remainingAmount === 0) {
+        loan.status = 'COMPLETED';
+      }
+
+      await loan.save();
+
+      // Populate and return
+      const populatedLoan = await Loan.findById(loanId)
+        .populate('borrower')
+        .populate('lender')
+        .populate('loanRequest')
+        .populate('selectedLenderByBorrower');
+
+      return populatedLoan;
+    },
+
+    async markLoanAsCompleted(_, { loanId }, context) {
+      if (!context.user) throw new Error('Authentication required');
+
+      const loan = await Loan.findById(loanId);
+      if (!loan) throw new Error('Loan not found');
+
+      // Check authorization (both borrower and lender can mark as completed)
+      const isBorrower = loan.borrower.toString() === context.user.userId;
+      const isLender = loan.lender.toString() === context.user.userId;
+
+      if (!isBorrower && !isLender) {
+        throw new Error('Not authorized to complete this loan');
+      }
+
+      loan.status = 'COMPLETED';
+      await loan.save();
+
+      // Populate and return
+      const populatedLoan = await Loan.findById(loanId)
+        .populate('borrower')
+        .populate('lender')
+        .populate('loanRequest')
+        .populate('selectedLenderByBorrower');
+
+      return populatedLoan;
+    },
+
+    async editLoanReceived(_, { loanRequestId, lenderId }, context) {
+      if (!context.user) throw new Error('Authentication required');
+
+      const loanRequest = await LoanRequest.findById(loanRequestId)
+        .populate('linkedLoan');
+
+      if (!loanRequest) throw new Error('Loan request not found');
+
+      // Check if user is the borrower
+      if (loanRequest.borrower.toString() !== context.user.userId) {
+        throw new Error('Not authorized. Only the borrower can edit loan details');
+      }
+
+      // Check if loan is in pending state
+      if (!loanRequest.linkedLoan || loanRequest.linkedLoan.status !== 'LOAN_RECEIVED_PENDING') {
+        throw new Error('Loan is not in editable state');
+      }
+
+      // Check if new lender expressed interest
+      const lenderInterest = loanRequest.interestedLenders.find(
+        interest => interest.lender.toString() === lenderId
+      );
+
+      if (!lenderInterest) {
+        throw new Error('This lender has not expressed interest in your loan request');
+      }
+
+      // Update linked loan
+      const loan = await Loan.findById(loanRequest.linkedLoan._id);
+      loan.lender = lenderId;
+      loan.selectedLenderByBorrower = lenderId;
+      loan.interestRate = lenderInterest.interestRate;
+      loan.lenderConfirmed = false; // Reset lender confirmation
+      loan.confirmedDate = null;
+      await loan.save();
+
+      // Populate and return
+      const populatedLoanRequest = await LoanRequest.findById(loanRequestId)
+        .populate('borrower')
+        .populate('selectedLender')
+        .populate('interestedLenders.lender')
+        .populate('linkedLoan');
+
+      return populatedLoanRequest;
+    },
+
+    async deleteLoanRequest(_, { loanRequestId }, context) {
+      if (!context.user) throw new Error('Authentication required');
+
+      const loanRequest = await LoanRequest.findById(loanRequestId);
+      if (!loanRequest) throw new Error('Loan request not found');
+
+      // Check if user is the borrower (owner)
+      if (loanRequest.borrower.toString() !== context.user.userId) {
+        throw new Error('Not authorized. Only the borrower can delete their loan request');
+      }
+
+      // Only allow deletion of pending requests
+      if (loanRequest.status !== 'PENDING') {
+        throw new Error('Can only delete pending loan requests. This request has already been processed.');
+      }
+
+      // Delete the loan request
+      await LoanRequest.findByIdAndDelete(loanRequestId);
+
+      return {
+        success: true,
+        message: 'Loan request deleted successfully'
+      };
     }
   },
 

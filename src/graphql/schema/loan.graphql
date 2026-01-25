@@ -13,6 +13,7 @@ type LoanRequest {
   interestedLenders: [LenderInterest]
   selectedLender: User
   agreement: LoanAgreement
+  linkedLoan: Loan
   createdAt: String!
   updatedAt: String!
 }
@@ -28,6 +29,7 @@ enum LoanStatus {
   REJECTED
   FUNDED
   CANCELLED
+  LOAN_RECEIVED_PENDING
 }
 
 type Collateral {
@@ -65,6 +67,65 @@ type LoanAgreement {
   termsAccepted: Boolean!
 }
 
+type Loan {
+  id: ID!
+  loanRequest: LoanRequest!
+  borrower: User!
+  lender: User!
+  amount: Float!
+  interestRate: Float!
+  durationMonths: Int!
+  status: LoanActiveStatus!
+  disbursementDate: String
+  confirmedDate: String
+  dueDate: String!
+  repayments: [Repayment!]!
+  totalRepaid: Float!
+  remainingAmount: Float!
+  borrowerConfirmed: Boolean!
+  lenderConfirmed: Boolean!
+  selectedLenderByBorrower: User
+  isOverdue: Boolean!
+  createdAt: String!
+  updatedAt: String!
+}
+
+enum LoanActiveStatus {
+  LOAN_RECEIVED_PENDING
+  ACTIVE
+  COMPLETED
+  DEFAULTED
+}
+
+type Repayment {
+  id: ID!
+  amount: Float!
+  paidDate: String!
+  note: String
+}
+
+type LoanMetrics {
+  totalBorrowed: Float!
+  totalLended: Float!
+  activeBorrowedCount: Int!
+  activeLendedCount: Int!
+  completedBorrowedCount: Int!
+  completedLendedCount: Int!
+  totalToRepay: Float!
+  overdueLoans: Int!
+}
+
+type DeleteLoanRequestResponse {
+  success: Boolean!
+  message: String!
+}
+
+input RepaymentInput {
+  loanId: ID!
+  amount: Float!
+  note: String
+}
+
 input LoanRequestInput {
   amount: Float!
   purpose: String!
@@ -89,6 +150,11 @@ extend type Query {
   getLoanRequest(id: ID!): LoanRequest
   getMyLoanRequests: [LoanRequest!]!
   getAvailableLoanRequests: [LoanRequest!]!
+  getMyLoans(type: String!, status: LoanActiveStatus): [Loan!]!
+  getLoanMetrics: LoanMetrics!
+  getActiveLoan: Loan
+  getLoanHistory(type: String!, page: Int, limit: Int): [Loan!]!
+  getLoan(id: ID!): Loan
 }
 
 extend type Mutation {
@@ -98,6 +164,12 @@ extend type Mutation {
   expressInterest(loanRequestId: ID!, interestRate: Float!, message: String): LoanRequest!
   selectLender(loanRequestId: ID!, lenderId: ID!): LoanRequest!
   acceptLoanTerms(loanRequestId: ID!): LoanRequest!
+  markLoanAsReceived(loanRequestId: ID!, lenderId: ID!): LoanRequest!
+  confirmLoanDisbursement(loanId: ID!): Loan!
+  recordRepayment(input: RepaymentInput!): Loan!
+  markLoanAsCompleted(loanId: ID!): Loan!
+  editLoanReceived(loanRequestId: ID!, lenderId: ID!): LoanRequest!
+  deleteLoanRequest(loanRequestId: ID!): DeleteLoanRequestResponse!
 }
 
 extend type Subscription {

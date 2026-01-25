@@ -23,6 +23,16 @@ const UserSchema = new Schema({
     default: false
   },
 
+  // Verification Status
+  verificationStatus: {
+    type: String,
+    enum: ['PENDING_VERIFICATION', 'VERIFIED', 'DECLINED'],
+    default: 'PENDING_VERIFICATION'
+  },
+  verificationNote: { type: String },
+  verifiedAt: { type: Date },
+  verifiedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+
   // Profile Configuration
   role: {
     type: String,
