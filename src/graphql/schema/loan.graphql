@@ -30,6 +30,7 @@ enum LoanStatus {
   FUNDED
   CANCELLED
   LOAN_RECEIVED_PENDING
+  ACCEPTED
 }
 
 type Collateral {
@@ -155,6 +156,36 @@ extend type Query {
   getActiveLoan: Loan
   getLoanHistory(type: String!, page: Int, limit: Int): [Loan!]!
   getLoan(id: ID!): Loan
+  getLoanOffers(loanRequestId: ID!): [LoanOffer!]!
+  getMyActiveLoans: [Loan!]!
+  getMyLentLoans: [Loan!]!
+}
+
+type LoanOffer {
+  id: ID!
+  loanRequestId: ID!
+  loanRequest: LoanRequest
+  lenderId: ID!
+  lender: User!
+  interestRate: Float!
+  amount: Float!
+  status: LoanOfferStatus!
+  message: String
+  createdAt: String!
+  updatedAt: String!
+}
+
+enum LoanOfferStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  WITHDRAWN
+}
+
+input OfferLoanInput {
+  loanRequestId: ID!
+  interestRate: Float!
+  message: String
 }
 
 extend type Mutation {
@@ -170,6 +201,9 @@ extend type Mutation {
   markLoanAsCompleted(loanId: ID!): Loan!
   editLoanReceived(loanRequestId: ID!, lenderId: ID!): LoanRequest!
   deleteLoanRequest(loanRequestId: ID!): DeleteLoanRequestResponse!
+  offerLoan(input: OfferLoanInput!): LoanOffer!
+  acceptLoanOffer(offerId: ID!): Loan!
+  rejectLoanOffer(offerId: ID!): LoanOffer!
 }
 
 extend type Subscription {

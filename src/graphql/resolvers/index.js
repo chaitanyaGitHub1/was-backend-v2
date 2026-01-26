@@ -33,7 +33,11 @@ const resolvers = {
   Subscription: {
     ...chatResolvers.Subscription,
     ...loanResolvers.Subscription, // Add this line
-  }
+  },
+  // Add Type resolvers that were missing
+  LoanOffer: loanResolvers.LoanOffer,
+  LenderPost: lenderPostResolver.LenderPost,
+  User: userResolvers.User,
 };
 
 module.exports = resolvers;

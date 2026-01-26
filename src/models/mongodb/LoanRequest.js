@@ -76,8 +76,18 @@ const LoanRequestSchema = new Schema({
   // Status tracking
   status: {
     type: String,
-    enum: ['PENDING', 'APPROVED', 'REJECTED', 'FUNDED', 'CANCELLED', 'LOAN_RECEIVED_PENDING'],
+    enum: ['PENDING', 'APPROVED', 'REJECTED', 'FUNDED', 'CANCELLED', 'LOAN_RECEIVED_PENDING', 'ACCEPTED'],
     default: 'PENDING'
+  },
+
+  // Track which offer was accepted
+  acceptedOfferId: {
+    type: Schema.Types.ObjectId,
+    ref: 'LoanOffer'
+  },
+
+  acceptedAt: {
+    type: Date
   },
 
   // Link to active loan (once loan tracking begins)

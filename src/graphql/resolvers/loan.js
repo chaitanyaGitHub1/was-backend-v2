@@ -1,5 +1,6 @@
 const LoanRequest = require('../../models/mongodb/LoanRequest');
 const Loan = require('../../models/mongodb/Loan');
+const LoanOffer = require('../../models/mongodb/LoanOffer');
 const User = require('../../models/mongodb/User');
 const pubsub = require('../../utils/pubsub');
 
@@ -209,6 +210,60 @@ module.exports = {
       }
 
       return loan;
+    },
+
+    async getLoanOffers(_, { loanRequestId }, context) {
+      if (!context.user) throw new Error('Authentication required');
+
+      const loanRequest = await LoanRequest.findById(loanRequestId);
+      if (!loanRequest) throw new Error('Loan request not found');
+
+      const offers = await LoanOffer.find({ loanRequestId })
+        .populate('lenderId')
+        .populate('loanRequestId')
+        .sort({ createdAt: -1 });
+
+      return offers;
+    },
+
+    async getMyActiveLoans(_, __, context) {
+      if (!context.user) throw new Error("Authentication required");
+
+      try {
+        const activeLoans = await Loan.find({
+          borrower: context.user.userId,
+          status: { $in: ['ACTIVE', 'LOAN_RECEIVED_PENDING', 'COMPLETED', 'DEFAULTED'] }
+        })
+          .populate('borrower')
+          .populate('lender')
+          .populate('loanRequest')
+          .sort({ createdAt: -1 });
+
+        return activeLoans;
+      } catch (error) {
+        console.error("Error fetching active loans:", error);
+        throw new Error("Failed to fetch active loans");
+      }
+    },
+
+    async getMyLentLoans(_, __, context) {
+      if (!context.user) throw new Error("Authentication required");
+
+      try {
+        const lentLoans = await Loan.find({
+          lender: context.user.userId,
+          status: { $in: ['ACTIVE', 'LOAN_RECEIVED_PENDING', 'COMPLETED', 'DEFAULTED'] }
+        })
+          .populate('borrower')
+          .populate('lender')
+          .populate('loanRequest')
+          .sort({ createdAt: -1 });
+
+        return lentLoans;
+      } catch (error) {
+        console.error("Error fetching lent loans:", error);
+        throw new Error("Failed to fetch lent loans");
+      }
     }
   },
 
@@ -631,9 +686,9 @@ module.exports = {
       const loan = await Loan.findById(loanId);
       if (!loan) throw new Error('Loan not found');
 
-      // Check if user is the borrower
-      if (loan.borrower.toString() !== context.user.userId) {
-        throw new Error('Not authorized. Only the borrower can record repayments');
+      // Check if user is the lender
+      if (loan.lender.toString() !== context.user.userId) {
+        throw new Error('Not authorized. Only the lender can record repayments');
       }
 
       // Add repayment
@@ -760,8 +815,218 @@ module.exports = {
         success: true,
         message: 'Loan request deleted successfully'
       };
+    },
+
+    async offerLoan(_, { input }, context) {
+      if (!context.user) throw new Error('Authentication required');
+
+      const { loanRequestId, interestRate, message } = input;
+
+      // Get user to check role
+      const user = await User.findById(context.user.userId);
+      if (!user) throw new Error('User not found');
+
+      // Check if user is a lender
+      if (user.role !== 'lender' && user.role !== 'both') {
+        throw new Error('Only lenders can make loan offers');
+      }
+
+      // Get loan request
+      const loanRequest = await LoanRequest.findById(loanRequestId);
+      if (!loanRequest) throw new Error('Loan request not found');
+
+      // Check if loan request is still pending
+      if (loanRequest.status !== 'PENDING') {
+        throw new Error('This loan request is no longer accepting offers');
+      }
+
+      // Check if lender is trying to offer on their own request
+      if (loanRequest.borrower.toString() === context.user.userId) {
+        throw new Error('You cannot offer a loan on your own request');
+      }
+
+      // Validate interest rate
+      if (interestRate < 0 || interestRate > 100) {
+        throw new Error('Interest rate must be between 0 and 100');
+      }
+
+      // Check if lender already made an offer
+      const existingOffer = await LoanOffer.findOne({
+        loanRequestId,
+        lenderId: context.user.userId
+      });
+
+      if (existingOffer) {
+        // Update existing offer
+        existingOffer.interestRate = interestRate;
+        existingOffer.message = message;
+        existingOffer.status = 'PENDING';
+        await existingOffer.save();
+
+        const updatedOffer = await LoanOffer.findById(existingOffer._id)
+          .populate('lenderId');
+
+        return updatedOffer;
+      }
+
+      // Create new offer
+      const offer = new LoanOffer({
+        loanRequestId,
+        lenderId: context.user.userId,
+        interestRate,
+        amount: loanRequest.amount,
+        message,
+        status: 'PENDING'
+      });
+
+      await offer.save();
+
+      const populatedOffer = await LoanOffer.findById(offer._id)
+        .populate('lenderId');
+
+      return populatedOffer;
+    },
+
+    async acceptLoanOffer(_, { offerId }, context) {
+      if (!context.user) throw new Error("Authentication required");
+
+      try {
+        // Get the offer
+        const offer = await LoanOffer.findById(offerId).populate('loanRequestId');
+        if (!offer) throw new Error("Offer not found");
+
+        // Get the loan request
+        const loanRequest = await LoanRequest.findById(offer.loanRequestId);
+        if (!loanRequest) throw new Error("Loan request not found");
+
+        // Verify user is the borrower
+        if (loanRequest.borrower.toString() !== context.user.userId) {
+          throw new Error("Only the borrower can accept offers");
+        }
+
+        // Check if already accepted
+        if (loanRequest.status === 'ACCEPTED') {
+          throw new Error("This loan request has already been accepted");
+        }
+
+        // Update offer status
+        offer.status = 'ACCEPTED';
+        await offer.save();
+
+        // Reject all other offers for this loan request
+        await LoanOffer.updateMany(
+          {
+            loanRequestId: offer.loanRequestId,
+            _id: { $ne: offerId }
+          },
+          { status: 'REJECTED' }
+        );
+
+        // Update loan request
+        loanRequest.status = 'ACCEPTED';
+        loanRequest.acceptedOfferId = offerId;
+        loanRequest.acceptedAt = new Date();
+        await loanRequest.save();
+
+        // Calculate loan details
+        // Calculate loan details
+        const principal = loanRequest.amount;
+        const rate = offer.interestRate / 100;
+        const time = loanRequest.durationMonths / 12;
+        const totalInterest = principal * rate * time;
+        const totalRepayment = principal + totalInterest;
+
+        // Create loan document
+        const loan = new Loan({
+          loanRequest: loanRequest._id,
+          borrower: loanRequest.borrower,
+          lender: offer.lenderId,
+          amount: loanRequest.amount,
+          interestRate: offer.interestRate,
+          durationMonths: loanRequest.durationMonths,
+          status: 'ACTIVE',
+          disbursementDate: new Date(),
+          dueDate: new Date(new Date().setMonth(new Date().getMonth() + loanRequest.durationMonths)),
+          totalRepaid: 0,
+          remainingAmount: totalRepayment,
+          selectedLenderByBorrower: offer.lenderId,
+          repayments: []
+        });
+
+        await loan.save();
+
+        // Also update the linkedLoan in LoanRequest
+        loanRequest.linkedLoan = loan._id;
+        await loanRequest.save();
+
+        // Populate the loan
+        await loan.populate([
+          { path: 'borrower' },
+          { path: 'lender' },
+          { path: 'loanRequest' }
+        ]);
+
+        return loan;
+      } catch (error) {
+        console.error("Error accepting loan offer:", error);
+        throw error;
+      }
+    },
+
+    async rejectLoanOffer(_, { offerId }, context) {
+      if (!context.user) throw new Error("Authentication required");
+
+      try {
+        // Get the offer
+        const offer = await LoanOffer.findById(offerId).populate('loanRequestId');
+        if (!offer) throw new Error("Offer not found");
+
+        // Get the loan request
+        const loanRequest = await LoanRequest.findById(offer.loanRequestId);
+        if (!loanRequest) throw new Error("Loan request not found");
+
+        // Verify user is the borrower
+        if (loanRequest.borrower.toString() !== context.user.userId) {
+          throw new Error("Only the borrower can reject offers");
+        }
+
+        // Update offer status
+        offer.status = 'REJECTED';
+        await offer.save();
+
+        // Re-populate before returning
+        await offer.populate('lenderId');
+
+        return offer;
+      } catch (error) {
+        console.error("Error rejecting loan offer:", error);
+        throw error;
+      }
     }
   },
+
+  LoanOffer: {
+    lender: (offer) => offer.lenderId || offer.lender,
+    loanRequest: (offer) => offer.loanRequestId || offer.loanRequest,
+
+    // Improved scalar ID extraction
+    lenderId: (offer) => {
+      const val = offer.lenderId || offer.lender;
+      if (!val) return null;
+      if (val._id) return val._id.toString();
+      if (val.id) return val.id.toString();
+      return val.toString();
+    },
+    loanRequestId: (offer) => {
+      const val = offer.loanRequestId || offer.loanRequest;
+      if (!val) return null;
+      if (val._id) return val._id.toString();
+      if (val.id) return val.id.toString();
+      return val.toString();
+    }
+  },
+
+
 
   Subscription: {
     newLoanRequest: {

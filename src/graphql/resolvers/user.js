@@ -28,7 +28,10 @@ module.exports = {
         location: user.profile?.location,
         email: user.auth?.email,
         phone: user.auth?.phone,
+        role: user.role,
         documentSubmitted: user.documentSubmitted,
+        verificationStatus: user.verificationStatus || 'PENDING_VERIFICATION',
+        verificationNote: user.verificationNote || null,
       };
     },
 
@@ -43,7 +46,7 @@ module.exports = {
       }
     },
   },
-  
+
   // Field resolvers for User type
   User: {
     id: (user) => user._id || user.id,
@@ -57,70 +60,72 @@ module.exports = {
 
   // Mutation resolvers
   Mutation: {
- async updateProfile(_, { input }, context) {
-  try {
-    console.log("=== updateProfile START ===");
-    console.log("Input:", JSON.stringify(input, null, 2));
-    console.log("Context user:", context.user);
-    
-    if (!context.user) {
-      throw new Error("Authentication required");
-    }
+    async updateProfile(_, { input }, context) {
+      try {
+        console.log("=== updateProfile START ===");
+        console.log("Input:", JSON.stringify(input, null, 2));
+        console.log("Context user:", context.user);
 
-    const user = await User.findById(context.user.userId);
-    if (!user) throw new Error("User not found");
+        if (!context.user) {
+          throw new Error("Authentication required");
+        }
 
-    // Build update object for profile fields
-    const updateFields = {};
-    
-    if (input.name !== undefined) {
-      updateFields['profile.name'] = input.name;
-    }
-    if (input.avatar !== undefined) {
-      updateFields['profile.avatar'] = input.avatar;
-    }
-    if (input.bio !== undefined) {
-      updateFields['profile.bio'] = input.bio;
-    }
-    if (input.email !== undefined) {
-      updateFields['auth.email'] = input.email;
-      updateFields['auth.isVerified.email'] = false;
-    }
-    if (input.location !== undefined) {
-      updateFields['profile.location'] = input.location;
-    }
+        const user = await User.findById(context.user.userId);
+        if (!user) throw new Error("User not found");
 
-    updateFields.updatedAt = new Date();
+        // Build update object for profile fields
+        const updateFields = {};
 
-    const updatedUser = await User.findByIdAndUpdate(
-      context.user.userId,
-      { $set: updateFields },
-      { new: true, runValidators: true } // Added runValidators
-    );
+        if (input.name !== undefined) {
+          updateFields['profile.name'] = input.name;
+        }
+        if (input.avatar !== undefined) {
+          updateFields['profile.avatar'] = input.avatar;
+        }
+        if (input.bio !== undefined) {
+          updateFields['profile.bio'] = input.bio;
+        }
+        if (input.email !== undefined) {
+          updateFields['auth.email'] = input.email;
+          updateFields['auth.isVerified.email'] = false;
+        }
+        if (input.location !== undefined) {
+          updateFields['profile.location'] = input.location;
+        }
 
-    if (!updatedUser) {
-      throw new Error("Failed to update user");
-    }
+        updateFields.updatedAt = new Date();
 
-    // CRITICAL FIX: Ensure name is never null/undefined
-    // Since name is required in the schema, it should always exist
-    // But we add a safety check for the GraphQL type requirement
-    const profileName = updatedUser.profile?.name || user.profile?.name || "Unknown User";
+        const updatedUser = await User.findByIdAndUpdate(
+          context.user.userId,
+          { $set: updateFields },
+          { new: true, runValidators: true } // Added runValidators
+        );
 
-    return {
-      name: profileName, // Now guaranteed to have a value
-      avatar: updatedUser.profile?.avatar || null,
-      bio: updatedUser.profile?.bio || null,
-      location: updatedUser.profile?.location || null,
-      email: updatedUser.auth?.email || null,
-      phone: updatedUser.auth?.phone || null,
-      documentSubmitted: updatedUser.documentSubmitted || false,
-    };
-  } catch (error) {
-    console.error("updateProfile error:", error);
-    throw error;
-  }
-},
+        if (!updatedUser) {
+          throw new Error("Failed to update user");
+        }
+
+        // CRITICAL FIX: Ensure name is never null/undefined
+        // Since name is required in the schema, it should always exist
+        // But we add a safety check for the GraphQL type requirement
+        const profileName = updatedUser.profile?.name || user.profile?.name || "Unknown User";
+
+        return {
+          name: profileName, // Now guaranteed to have a value
+          avatar: updatedUser.profile?.avatar || null,
+          bio: updatedUser.profile?.bio || null,
+          location: updatedUser.profile?.location || null,
+          email: updatedUser.auth?.email || null,
+          phone: updatedUser.auth?.phone || null,
+          documentSubmitted: updatedUser.documentSubmitted || false,
+          verificationStatus: updatedUser.verificationStatus || 'PENDING_VERIFICATION',
+          verificationNote: updatedUser.verificationNote || null,
+        };
+      } catch (error) {
+        console.error("updateProfile error:", error);
+        throw error;
+      }
+    },
 
     async requestPhoneUpdateOtp(_, { input }, context) {
       if (!context.user) {
@@ -217,6 +222,8 @@ module.exports = {
         email: updatedUser.auth?.email,
         phone: updatedUser.auth?.phone,
         documentSubmitted: updatedUser.documentSubmitted,
+        verificationStatus: updatedUser.verificationStatus || 'PENDING_VERIFICATION',
+        verificationNote: updatedUser.verificationNote || null,
       };
     },
   },

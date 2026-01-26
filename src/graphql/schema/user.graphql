@@ -45,6 +45,7 @@ type UserProfile {
   location: Location
   email: String
   phone: String
+  role: String!
   documentSubmitted: Boolean
   verificationStatus: VerificationStatus!
   verificationNote: String
