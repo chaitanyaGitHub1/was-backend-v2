@@ -39,9 +39,16 @@ module.exports = {
         }));
 
       } else if (filter === 'LOAN_REQUESTS') {
-        // For loan requests, we search in the purpose and description fields.
+        // For loan requests, we search in the purpose, description, AND borrower name.
+        const matchingUsers = await User.find({ 'profile.name': searchQuery }).select('_id');
+        const userIds = matchingUsers.map((user) => user._id);
+
         const loanQuery = {
-          $or: [{ purpose: searchQuery }, { description: searchQuery }],
+          $or: [
+            { purpose: searchQuery },
+            { description: searchQuery },
+            { borrower: { $in: userIds } }
+          ],
         };
 
         // Add security type filter if provided
